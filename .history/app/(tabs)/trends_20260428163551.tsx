@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   ScrollView,
@@ -6,58 +6,36 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "../../constants/colors";
-import { FontFamily, FontSize } from "../../constants/typography";
-import { api } from "../../services/api";
-import type { TrendsData } from "../../types";
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../constants/colors';
+import { FontFamily, FontSize } from '../../constants/typography';
+import { api } from '../../services/api';
+import type { TrendsData } from '../../types';
 
-const PLATFORMS = [
-  "instagram",
-  "facebook",
-  "linkedin",
-  "twitter",
-  "tiktok",
-] as const;
-type Platform = (typeof PLATFORMS)[number];
+const PLATFORMS = ['instagram', 'facebook', 'linkedin', 'twitter', 'tiktok'] as const;
+type Platform = typeof PLATFORMS[number];
 
 const PLATFORM_LABELS: Record<Platform, string> = {
-  instagram: "Instagram",
-  facebook: "Facebook",
-  linkedin: "LinkedIn",
-  twitter: "X",
-  tiktok: "TikTok",
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+  twitter: 'Twitter',
+  tiktok: 'TikTok',
 };
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
-function SkeletonBlock({
-  width,
-  height = 14,
-  style,
-}: {
-  width: number | string;
-  height?: number;
-  style?: object;
-}) {
+function SkeletonBlock({ width, height = 14, style }: { width: number | string; height?: number; style?: object }) {
   const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.4,
-          duration: 700,
-          useNativeDriver: true,
-        }),
-      ]),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
     );
     loop.start();
     return () => loop.stop();
@@ -65,16 +43,7 @@ function SkeletonBlock({
 
   return (
     <Animated.View
-      style={[
-        {
-          width,
-          height,
-          borderRadius: 6,
-          backgroundColor: Colors.border,
-          opacity,
-        },
-        style,
-      ]}
+      style={[{ width, height, borderRadius: 6, backgroundColor: Colors.border, opacity }, style]}
     />
   );
 }
@@ -96,24 +65,14 @@ function SectionHeader({ label }: { label: string }) {
   return <Text style={styles.sectionLabel}>{label}</Text>;
 }
 
-function FormatCard({
-  format,
-  why_it_works,
-  example_hook,
-}: {
-  format: string;
-  why_it_works: string;
-  example_hook: string;
-}) {
+function FormatCard({ format, why_it_works, example_hook }: { format: string; why_it_works: string; example_hook: string }) {
   return (
     <View style={styles.rowCard}>
       <View style={styles.rowCardDot} />
       <View style={{ flex: 1 }}>
         <Text style={styles.rowCardTitle}>{format}</Text>
         <Text style={styles.rowCardBody}>{why_it_works}</Text>
-        {example_hook ? (
-          <Text style={styles.rowCardHook}>"{example_hook}"</Text>
-        ) : null}
+        {example_hook ? <Text style={styles.rowCardHook}>"{example_hook}"</Text> : null}
       </View>
     </View>
   );
@@ -122,7 +81,7 @@ function FormatCard({
 function TopicCard({ topic, angle }: { topic: string; angle: string }) {
   return (
     <View style={styles.rowCard}>
-      <View style={[styles.rowCardDot, { backgroundColor: "#8B5CF6" }]} />
+      <View style={[styles.rowCardDot, { backgroundColor: '#8B5CF6' }]} />
       <View style={{ flex: 1 }}>
         <Text style={styles.rowCardTitle}>{topic}</Text>
         <Text style={styles.rowCardBody}>{angle}</Text>
@@ -145,16 +104,9 @@ function HashtagPills({ tags, color }: { tags: string[]; color: string }) {
 
 function AvoidCard({ text }: { text: string }) {
   return (
-    <View
-      style={[
-        styles.rowCard,
-        { borderLeftColor: Colors.scoreRed, borderLeftWidth: 3 },
-      ]}
-    >
+    <View style={[styles.rowCard, { borderLeftColor: Colors.scoreRed, borderLeftWidth: 3 }]}>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.rowCardBody, { color: Colors.textPrimary }]}>
-          {text}
-        </Text>
+        <Text style={[styles.rowCardBody, { color: Colors.textPrimary }]}>{text}</Text>
       </View>
     </View>
   );
@@ -164,29 +116,21 @@ function AvoidCard({ text }: { text: string }) {
 
 export default function TrendsScreen() {
   const router = useRouter();
-  const [platform, setPlatform] = useState<Platform>("instagram");
+  const [platform, setPlatform] = useState<Platform>('instagram');
   const [data, setData] = useState<TrendsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dataCache = useRef<Partial<Record<Platform, TrendsData>>>({});
 
   const fetchTrends = useCallback(async (p: Platform) => {
-    if (dataCache.current[p]) {
-      setData(dataCache.current[p]!);
-      setLoading(false);
-      setError(null);
-      return;
-    }
     setLoading(true);
     setError(null);
     setData(null);
     try {
       const result = await api.trends.get(p);
-      dataCache.current[p] = result;
       setData(result);
     } catch {
-      setError("Could not load trends. Tap refresh to try again.");
+      setError('Could not load trends. Tap refresh to try again.');
     } finally {
       setLoading(false);
     }
@@ -197,10 +141,9 @@ export default function TrendsScreen() {
     setError(null);
     try {
       const result = await api.trends.refresh(platform);
-      dataCache.current[platform] = result;
       setData(result);
     } catch {
-      setError("Refresh failed. Try again.");
+      setError('Refresh failed. Try again.');
     } finally {
       setRefreshing(false);
     }
@@ -216,7 +159,7 @@ export default function TrendsScreen() {
   };
 
   const handleGenerateFromHere = () => {
-    router.push("/(tabs)/generate");
+    router.push('/(tabs)/generate');
   };
 
   return (
@@ -234,13 +177,8 @@ export default function TrendsScreen() {
             size={18}
             color={refreshing || loading ? Colors.textSecondary : Colors.teal}
           />
-          <Text
-            style={[
-              styles.refreshBtnText,
-              (refreshing || loading) && { color: Colors.textSecondary },
-            ]}
-          >
-            {refreshing ? "Refreshing…" : "Refresh"}
+          <Text style={[styles.refreshBtnText, (refreshing || loading) && { color: Colors.textSecondary }]}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -255,18 +193,10 @@ export default function TrendsScreen() {
         {PLATFORMS.map((p) => (
           <TouchableOpacity
             key={p}
-            style={[
-              styles.platformPill,
-              platform === p && styles.platformPillActive,
-            ]}
+            style={[styles.platformPill, platform === p && styles.platformPillActive]}
             onPress={() => handlePlatformChange(p)}
           >
-            <Text
-              style={[
-                styles.platformPillText,
-                platform === p && styles.platformPillTextActive,
-              ]}
-            >
+            <Text style={[styles.platformPillText, platform === p && styles.platformPillTextActive]}>
               {PLATFORM_LABELS[p]}
             </Text>
           </TouchableOpacity>
@@ -287,16 +217,9 @@ export default function TrendsScreen() {
           </>
         ) : error ? (
           <View style={styles.errorState}>
-            <Ionicons
-              name="cloud-offline-outline"
-              size={40}
-              color={Colors.textSecondary}
-            />
+            <Ionicons name="cloud-offline-outline" size={40} color={Colors.textSecondary} />
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryBtn}
-              onPress={() => fetchTrends(platform)}
-            >
+            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchTrends(platform)}>
               <Text style={styles.retryBtnText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -312,12 +235,7 @@ export default function TrendsScreen() {
             <View style={styles.section}>
               <SectionHeader label="TRENDING FORMATS" />
               {(data.trending_formats ?? []).map((item, i) => (
-                <FormatCard
-                  key={i}
-                  format={item.format}
-                  why_it_works={item.why_it_works}
-                  example_hook={item.example_hook}
-                />
+                <FormatCard key={i} format={item.format} why_it_works={item.why_it_works} example_hook={item.example_hook} />
               ))}
             </View>
 
@@ -332,25 +250,18 @@ export default function TrendsScreen() {
             {/* Hashtag Strategy */}
             <View style={styles.section}>
               <SectionHeader label="HASHTAG STRATEGY" />
-              {[
-                { label: 'Broad (1M+)', tags: data.hashtag_strategy.broad ?? [], color: Colors.teal },
-                { label: 'Mid (100k–1M)', tags: data.hashtag_strategy.mid ?? [], color: '#8B5CF6' },
-                { label: 'Niche (<100k)', tags: data.hashtag_strategy.niche ?? [], color: Colors.scoreAmber },
-              ].map(({ label, tags, color }) =>
-                tags.length === 0 ? null : (
-                  <View key={label} style={styles.hashtagGroup}>
-                    <Text style={styles.hashtagGroupLabel}>{label}</Text>
-                    <HashtagPills tags={tags} color={color} />
-                  </View>
-                )
-              )}
-              {(data.hashtag_strategy.broad ?? []).length === 0 &&
-               (data.hashtag_strategy.mid ?? []).length === 0 &&
-               (data.hashtag_strategy.niche ?? []).length === 0 && (
-                <Text style={styles.hashtagNote}>
-                  X/Twitter uses minimal hashtags — focus on strong copy and trending topics instead.
-                </Text>
-              )}
+              <View style={styles.hashtagGroup}>
+                <Text style={styles.hashtagGroupLabel}>Broad (1M+)</Text>
+                <HashtagPills tags={data.hashtag_strategy.broad ?? []} color={Colors.teal} />
+              </View>
+              <View style={styles.hashtagGroup}>
+                <Text style={styles.hashtagGroupLabel}>Mid (100k–1M)</Text>
+                <HashtagPills tags={data.hashtag_strategy.mid ?? []} color="#8B5CF6" />
+              </View>
+              <View style={styles.hashtagGroup}>
+                <Text style={styles.hashtagGroupLabel}>Niche (&lt;100k)</Text>
+                <HashtagPills tags={data.hashtag_strategy.niche ?? []} color={Colors.scoreAmber} />
+              </View>
             </View>
 
             {/* What to Avoid */}
@@ -362,23 +273,12 @@ export default function TrendsScreen() {
             </View>
 
             {/* Generate from here */}
-            <TouchableOpacity
-              style={styles.generateCta}
-              onPress={handleGenerateFromHere}
-            >
+            <TouchableOpacity style={styles.generateCta} onPress={handleGenerateFromHere}>
               <View style={styles.generateCtaLeft}>
-                <Text style={styles.generateCtaTitle}>
-                  Create content around these trends
-                </Text>
-                <Text style={styles.generateCtaBody}>
-                  Jump to Generate with {PLATFORM_LABELS[platform]} selected
-                </Text>
+                <Text style={styles.generateCtaTitle}>Create content around these trends</Text>
+                <Text style={styles.generateCtaBody}>Jump to Generate with {PLATFORM_LABELS[platform]} selected</Text>
               </View>
-              <Ionicons
-                name="arrow-forward-outline"
-                size={20}
-                color={Colors.teal}
-              />
+              <Ionicons name="arrow-forward-outline" size={20} color={Colors.teal} />
             </TouchableOpacity>
 
             {data.last_updated ? (
@@ -401,9 +301,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.offWhite,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 12,
@@ -415,8 +315,8 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   refreshBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -440,7 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
     gap: 8,
-    alignItems: "center",
+    alignItems: 'center',
   },
   platformPill: {
     paddingVertical: 7,
@@ -460,7 +360,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   platformPillTextActive: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
   },
   scroll: {
     flex: 1,
@@ -470,8 +370,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   insightCallout: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 10,
     backgroundColor: Colors.surface,
     borderRadius: 12,
@@ -498,8 +398,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rowCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 12,
     backgroundColor: Colors.surface,
     borderRadius: 12,
@@ -530,7 +430,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: FontSize.xs,
     color: Colors.teal,
-    fontStyle: "italic",
+    fontStyle: 'italic',
     lineHeight: 18,
     marginTop: 4,
   },
@@ -544,8 +444,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   pillRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   hashtagPill: {
@@ -558,16 +458,9 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.mono,
     fontSize: 11,
   },
-  hashtagNote: {
-    fontFamily: FontFamily.sans,
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
   generateCta: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
@@ -594,11 +487,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: 8,
   },
   errorState: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingTop: 60,
     gap: 12,
   },
@@ -606,7 +499,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sans,
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    textAlign: "center",
+    textAlign: 'center',
     maxWidth: 260,
   },
   retryBtn: {
@@ -619,6 +512,6 @@ const styles = StyleSheet.create({
   retryBtnText: {
     fontFamily: FontFamily.sansMedium,
     fontSize: FontSize.sm,
-    color: "#FFFFFF",
+    color: '#FFFFFF',
   },
 });

@@ -14,7 +14,7 @@
       "backgroundColor": "#1C2B3A"
     },
     "ios": {
-      "bundleIdentifier": "app.scorrd.mobile",
+      "bundleIdentifier": "com.yourname.scorrd",
       "supportsTablet": false,
       "supportsTablet": false,
       "infoPlist": {

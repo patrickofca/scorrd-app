@@ -14,8 +14,6 @@
       "backgroundColor": "#1C2B3A"
     },
     "ios": {
-      "bundleIdentifier": "app.scorrd.mobile",
-      "supportsTablet": false,
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Scorrd needs access to your photo library to analyze listing images.",

@@ -169,21 +169,13 @@ export default function TrendsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dataCache = useRef<Partial<Record<Platform, TrendsData>>>({});
 
   const fetchTrends = useCallback(async (p: Platform) => {
-    if (dataCache.current[p]) {
-      setData(dataCache.current[p]!);
-      setLoading(false);
-      setError(null);
-      return;
-    }
     setLoading(true);
     setError(null);
     setData(null);
     try {
       const result = await api.trends.get(p);
-      dataCache.current[p] = result;
       setData(result);
     } catch {
       setError("Could not load trends. Tap refresh to try again.");
@@ -197,7 +189,6 @@ export default function TrendsScreen() {
     setError(null);
     try {
       const result = await api.trends.refresh(platform);
-      dataCache.current[platform] = result;
       setData(result);
     } catch {
       setError("Refresh failed. Try again.");
@@ -332,25 +323,27 @@ export default function TrendsScreen() {
             {/* Hashtag Strategy */}
             <View style={styles.section}>
               <SectionHeader label="HASHTAG STRATEGY" />
-              {[
-                { label: 'Broad (1M+)', tags: data.hashtag_strategy.broad ?? [], color: Colors.teal },
-                { label: 'Mid (100k–1M)', tags: data.hashtag_strategy.mid ?? [], color: '#8B5CF6' },
-                { label: 'Niche (<100k)', tags: data.hashtag_strategy.niche ?? [], color: Colors.scoreAmber },
-              ].map(({ label, tags, color }) =>
-                tags.length === 0 ? null : (
-                  <View key={label} style={styles.hashtagGroup}>
-                    <Text style={styles.hashtagGroupLabel}>{label}</Text>
-                    <HashtagPills tags={tags} color={color} />
-                  </View>
-                )
-              )}
-              {(data.hashtag_strategy.broad ?? []).length === 0 &&
-               (data.hashtag_strategy.mid ?? []).length === 0 &&
-               (data.hashtag_strategy.niche ?? []).length === 0 && (
-                <Text style={styles.hashtagNote}>
-                  X/Twitter uses minimal hashtags — focus on strong copy and trending topics instead.
-                </Text>
-              )}
+              <View style={styles.hashtagGroup}>
+                <Text style={styles.hashtagGroupLabel}>Broad (1M+)</Text>
+                <HashtagPills
+                  tags={data.hashtag_strategy.broad ?? []}
+                  color={Colors.teal}
+                />
+              </View>
+              <View style={styles.hashtagGroup}>
+                <Text style={styles.hashtagGroupLabel}>Mid (100k–1M)</Text>
+                <HashtagPills
+                  tags={data.hashtag_strategy.mid ?? []}
+                  color="#8B5CF6"
+                />
+              </View>
+              <View style={styles.hashtagGroup}>
+                <Text style={styles.hashtagGroupLabel}>Niche (&lt;100k)</Text>
+                <HashtagPills
+                  tags={data.hashtag_strategy.niche ?? []}
+                  color={Colors.scoreAmber}
+                />
+              </View>
             </View>
 
             {/* What to Avoid */}
@@ -557,13 +550,6 @@ const styles = StyleSheet.create({
   hashtagPillText: {
     fontFamily: FontFamily.mono,
     fontSize: 11,
-  },
-  hashtagNote: {
-    fontFamily: FontFamily.sans,
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-    lineHeight: 18,
   },
   generateCta: {
     flexDirection: "row",
