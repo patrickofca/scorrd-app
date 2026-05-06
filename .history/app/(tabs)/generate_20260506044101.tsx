@@ -38,7 +38,7 @@ import {
 import { ListingPriceSelector } from "../../components/ListingPriceSelector";
 import { BuyerTypeSelector } from "../../components/BuyerTypeSelector";
 import { usePreFillStore } from "../../store/preFillStore";
-import type { GeneratedPost, ReelScriptResult, CarouselAnalysis } from "../../types";
+import type { GeneratedPost, ReelScriptResult } from "../../types";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 
@@ -158,28 +158,6 @@ const PLATFORM_PHOTO_TIPS: Record<string, { tips: string[]; avoid: string[] }> =
     },
   };
 
-function buildPersonalHashtags(
-  name: string | null,
-  market: string | null,
-  brokerage: string | null,
-): string[] {
-  const clean = (s: string) => s.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '');
-  const tags: string[] = [];
-  if (market) {
-    const city = clean(market.split(',')[0].trim());
-    if (city) { tags.push(`#${city}`); tags.push(`#${city}RealEstate`); }
-  }
-  if (name) {
-    const agent = clean(name);
-    if (agent) tags.push(`#${agent}Realty`);
-  }
-  if (brokerage) {
-    const b = clean(brokerage);
-    if (b) tags.push(`#${b}`);
-  }
-  return tags;
-}
-
 export default function GenerateScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -230,9 +208,6 @@ export default function GenerateScreen() {
     script: ReelScriptResult;
   } | null>(null);
   const [expandedScenes, setExpandedScenes] = useState<Set<number>>(new Set());
-  const [carouselResult, setCarouselResult] = useState<CarouselAnalysis | null>(null);
-  const [selectedSlide, setSelectedSlide] = useState<number | null>(null);
-  const [carouselCaptionTab, setCarouselCaptionTab] = useState<string>("");
 
   useFocusEffect(
     useCallback(() => {
@@ -292,12 +267,9 @@ export default function GenerateScreen() {
       "",
       `CAPTION:\n${script.caption}`,
       "",
-      [...script.hashtags, ...personalHashtags].map((t) => (t.startsWith("#") ? t : `#${t}`)).join(" "),
+      script.hashtags.map((t) => (t.startsWith("#") ? t : `#${t}`)).join(" "),
       ...(script.tiktok_repurpose_hook
         ? ["", `TIKTOK HOOK: ${script.tiktok_repurpose_hook}`]
-        : []),
-      ...(script.facebook_repurpose_hook
-        ? ["", `FACEBOOK HOOK: ${script.facebook_repurpose_hook}`]
         : []),
     ];
     await Clipboard.setStringAsync(lines.join("\n"));
@@ -345,21 +317,11 @@ export default function GenerateScreen() {
 
   function removeSlide(index: number) {
     setSlides((prev) => prev.filter((_, i) => i !== index));
-    setSelectedSlide(null);
-  }
-
-  function swapSlides(a: number, b: number) {
-    setSlides((prev) => {
-      const next = [...prev];
-      [next[a], next[b]] = [next[b], next[a]];
-      return next;
-    });
   }
 
   async function handleCarouselAnalyze() {
     if (slides.length < 2) return;
     setLoading(true);
-    setCarouselResult(null);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const res = await api.carousel.analyze({
@@ -367,7 +329,6 @@ export default function GenerateScreen() {
           imageBase64: s.base64,
           mediaType: s.mediaType,
         })),
-        platforms: Array.from(platforms),
         content_type: contentType,
         ...(details.trim() ? { caption: details.trim() } : {}),
         ...(priceRange ? { listing_price_range: priceRange } : {}),
@@ -376,12 +337,11 @@ export default function GenerateScreen() {
           : {}),
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setCarouselResult(res.carouselAnalysis);
-      setCarouselCaptionTab(Array.from(platforms)[0] ?? "instagram");
+      router.push(`/analysis/carousel/${res.carouselAnalysis.id}`);
     } catch (err) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        "Generation failed",
+        "Analysis failed",
         err instanceof Error ? err.message : "Please try again.",
       );
     } finally {
@@ -635,11 +595,6 @@ export default function GenerateScreen() {
   }, [platforms]);
 
   const activePost = results?.find((p) => p.platform === activeTab);
-  const personalHashtags = buildPersonalHashtags(
-    user?.name ?? null,
-    user?.marketLocation ?? null,
-    user?.brokerageName ?? null,
-  );
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -693,9 +648,6 @@ export default function GenerateScreen() {
                 if (m !== "carousel") setSlides([]);
                 setResults(null);
                 setReelResult(null);
-                setCarouselResult(null);
-                setSelectedSlide(null);
-                setCarouselCaptionTab("");
               }}
               activeOpacity={0.8}
             >
@@ -998,7 +950,6 @@ export default function GenerateScreen() {
             <Text style={styles.sectionLabel}>
               Slides <Text style={styles.hint}>(min 2, max 10)</Text>
             </Text>
-            <Text style={styles.slideReorderHint}>Long press then tap to reorder</Text>
             <View style={styles.carouselGrid}>
               {Array.from({ length: Math.min(slides.length + 1, 10) }).map(
                 (_, i) => {
@@ -1014,31 +965,8 @@ export default function GenerateScreen() {
                       : `Slide ${slideNum}`;
                   const labelIsTeal = isHook || isCta;
                   if (isFilled) {
-                    const isSelected = selectedSlide === i;
                     return (
-                      <TouchableOpacity
-                        key={i}
-                        style={[
-                          styles.slideZone,
-                          isSelected && styles.slideZoneSelected,
-                        ]}
-                        onPress={() => {
-                          if (selectedSlide === null) return;
-                          if (selectedSlide === i) {
-                            setSelectedSlide(null);
-                          } else {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            swapSlides(selectedSlide, i);
-                            setSelectedSlide(null);
-                          }
-                        }}
-                        onLongPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          setSelectedSlide(i);
-                        }}
-                        delayLongPress={350}
-                        activeOpacity={0.85}
-                      >
+                      <View key={i} style={styles.slideZone}>
                         <Image
                           source={{ uri: slides[i].uri }}
                           style={styles.slideThumbnail}
@@ -1053,11 +981,6 @@ export default function GenerateScreen() {
                             {label}
                           </Text>
                         </View>
-                        {isSelected && (
-                          <View style={styles.slideSelectedOverlay}>
-                            <Ionicons name="swap-horizontal" size={28} color={Colors.surface} />
-                          </View>
-                        )}
                         <TouchableOpacity
                           style={styles.slideRemoveBtn}
                           onPress={() => removeSlide(i)}
@@ -1069,17 +992,14 @@ export default function GenerateScreen() {
                             color={Colors.surface}
                           />
                         </TouchableOpacity>
-                      </TouchableOpacity>
+                      </View>
                     );
                   }
                   return (
                     <TouchableOpacity
                       key={i}
                       style={styles.slideZoneEmpty}
-                      onPress={() => {
-                        if (selectedSlide !== null) { setSelectedSlide(null); return; }
-                        pickSlide(i);
-                      }}
+                      onPress={() => pickSlide(i)}
                       activeOpacity={0.7}
                     >
                       <Ionicons
@@ -1100,11 +1020,6 @@ export default function GenerateScreen() {
                 },
               )}
             </View>
-            {selectedSlide !== null && (
-              <Text style={styles.slideReorderHint}>
-                Tap another slide to swap · Tap same slide to cancel
-              </Text>
-            )}
           </>
         )}
 
@@ -1199,9 +1114,9 @@ export default function GenerateScreen() {
               <View style={styles.copyBox}>
                 <Text style={styles.copyText}>{activePost.generatedCopy}</Text>
 
-                {(activePost.hashtags.length > 0 || personalHashtags.length > 0) && (
+                {activePost.hashtags.length > 0 && (
                   <View style={styles.hashtagRow}>
-                    {[...activePost.hashtags, ...personalHashtags].map((tag, i) => (
+                    {activePost.hashtags.map((tag, i) => (
                       <View key={i} style={styles.hashtagPill}>
                         <Text style={styles.hashtagText}>
                           {tag.startsWith("#") ? tag : `#${tag}`}
@@ -1221,7 +1136,7 @@ export default function GenerateScreen() {
 
                       const textToCopy = [
                         activePost.generatedCopy,
-                        [...activePost.hashtags, ...personalHashtags]
+                        activePost.hashtags
                           .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`))
                           .join(" "),
                       ]
@@ -1262,28 +1177,20 @@ export default function GenerateScreen() {
               </View>
             )}
 
-            {/* Optimal posting times — one block per selected platform */}
-            {Array.from(platforms).some((p) => !!PLATFORM_OPTIMAL_TIMES[p]) && (
+            {/* Optimal posting times */}
+            {activeTab && PLATFORM_OPTIMAL_TIMES[activeTab] && (
               <View style={styles.optimalTimesSection}>
                 <Text style={styles.optimalTimesTitle}>Best Times to Post</Text>
-                {Array.from(platforms).map((p) => {
-                  const times = PLATFORM_OPTIMAL_TIMES[p];
-                  if (!times) return null;
-                  return (
-                    <View key={p} style={styles.optimalTimesPlatformBlock}>
-                      <Text style={styles.optimalTimesPlatform}>
-                        {PLATFORM_LABELS[p as Platform] ?? p}
-                      </Text>
-                      <View style={styles.optimalTimePills}>
-                        {times.map((t, i) => (
-                          <View key={i} style={styles.optimalTimePill}>
-                            <Text style={styles.optimalTimePillText}>{t}</Text>
-                          </View>
-                        ))}
-                      </View>
+                <Text style={styles.optimalTimesPlatform}>
+                  {PLATFORM_LABELS[activeTab as Platform] ?? activeTab}
+                </Text>
+                <View style={styles.optimalTimePills}>
+                  {PLATFORM_OPTIMAL_TIMES[activeTab].map((t, i) => (
+                    <View key={i} style={styles.optimalTimePill}>
+                      <Text style={styles.optimalTimePillText}>{t}</Text>
                     </View>
-                  );
-                })}
+                  ))}
+                </View>
               </View>
             )}
           </View>
@@ -1390,7 +1297,7 @@ export default function GenerateScreen() {
             <TouchableOpacity
               style={styles.hashtagRow}
               onPress={async () => {
-                const tags = [...reelResult.script.hashtags, ...personalHashtags]
+                const tags = reelResult.script.hashtags
                   .map((t) => (t.startsWith("#") ? t : `#${t}`))
                   .join(" ");
                 await Clipboard.setStringAsync(tags);
@@ -1398,7 +1305,7 @@ export default function GenerateScreen() {
               }}
               activeOpacity={0.7}
             >
-              {[...reelResult.script.hashtags, ...personalHashtags].map((tag, i) => (
+              {reelResult.script.hashtags.map((tag, i) => (
                 <View key={i} style={styles.hashtagPill}>
                   <Text style={styles.hashtagText}>
                     {tag.startsWith("#") ? tag : `#${tag}`}
@@ -1425,38 +1332,18 @@ export default function GenerateScreen() {
               </View>
             )}
 
-            {/* Facebook repurpose hook */}
-            {reelResult.script.facebook_repurpose_hook && (
-              <View style={styles.reelTikTokBlock}>
-                <Text style={styles.reelTikTokLabel}>
-                  Facebook Repurpose Hook
-                </Text>
-                <Text style={styles.reelTikTokSubtitle}>
-                  Use this opening line when reposting this reel to Facebook
-                  Reels. Facebook's algorithm rewards content framed around
-                  community and lifestyle — swap your Instagram hook for this
-                  one.
-                </Text>
-                <View style={styles.reelTikTokHookContainer}>
-                  <Text style={styles.reelTikTokLine}>
-                    {reelResult.script.facebook_repurpose_hook}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Reel posting strategy — one block per selected platform */}
-            {Array.from(platforms)
-              .filter((p) => !!REEL_POSTING_STRATEGY[p])
-              .map((p) => {
-                const s = REEL_POSTING_STRATEGY[p];
+            {/* Reel posting strategy */}
+            {REEL_POSTING_STRATEGY[reelResult.post.platform] &&
+              (() => {
+                const s = REEL_POSTING_STRATEGY[reelResult.post.platform];
                 return (
-                  <View key={p} style={styles.optimalTimesSection}>
+                  <View style={styles.optimalTimesSection}>
                     <Text style={styles.optimalTimesTitle}>
                       Best Times to Post
                     </Text>
                     <Text style={styles.optimalTimesPlatform}>
-                      {(PLATFORM_LABELS[p as Platform] ?? p) + " Reels"}
+                      {(PLATFORM_LABELS[reelResult.post.platform as Platform] ??
+                        reelResult.post.platform) + " Reels"}
                     </Text>
                     <View style={styles.optimalTimePills}>
                       {s.times.map((t, i) => (
@@ -1481,7 +1368,7 @@ export default function GenerateScreen() {
                     </View>
                   </View>
                 );
-              })}
+              })()}
 
             {/* Bottom actions */}
             <View style={styles.copyActions}>
@@ -1508,169 +1395,6 @@ export default function GenerateScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        )}
-
-        {/* Carousel results */}
-        {mode === "carousel" && carouselResult && (
-          <View style={styles.carouselResultSection}>
-            <Text style={styles.sectionTitle}>Carousel Results</Text>
-
-            {/* Composite score */}
-            <View style={styles.carouselScoreRow}>
-              {(() => {
-                const composite = Number(carouselResult.carouselCompositeScore) || 0;
-                return (
-                  <View style={[styles.carouselScoreBadge, { backgroundColor: scoreColor(composite) + '1A', borderColor: scoreColor(composite) }]}>
-                    <Text style={[styles.carouselScoreNum, { color: scoreColor(composite) }]}>
-                      {composite.toFixed(1)}
-                    </Text>
-                    <Text style={[styles.carouselScoreLabel, { color: scoreColor(composite) }]}>
-                      Carousel Score
-                    </Text>
-                  </View>
-                );
-              })()}
-              <View style={styles.carouselScoreBreakdown}>
-                <Text style={styles.carouselBreakdownRow}>Hook  <Text style={styles.carouselBreakdownVal}>{(Number(carouselResult.hookScore) || 0).toFixed(1)}</Text></Text>
-                <Text style={styles.carouselBreakdownRow}>Sequence  <Text style={styles.carouselBreakdownVal}>{(Number(carouselResult.sequenceScore) || 0).toFixed(1)}</Text></Text>
-                <Text style={styles.carouselBreakdownRow}>Consistency  <Text style={styles.carouselBreakdownVal}>{(Number(carouselResult.consistencyScore) || 0).toFixed(1)}</Text></Text>
-                <Text style={styles.carouselBreakdownRow}>Swipe  <Text style={styles.carouselBreakdownVal}>{(Number(carouselResult.swipeMomentumScore) || 0).toFixed(1)}</Text></Text>
-                <Text style={styles.carouselBreakdownRow}>CTA  <Text style={styles.carouselBreakdownVal}>{(Number(carouselResult.ctaScore) || 0).toFixed(1)}</Text></Text>
-              </View>
-            </View>
-
-            {/* Per-slide scores */}
-            <Text style={styles.carouselSubLabel}>Slide Grades</Text>
-            {carouselResult.perSlideScores.map((slide) => (
-              <View key={slide.slide_number} style={styles.carouselSlideRow}>
-                <View style={[styles.carouselSlideBadge, { backgroundColor: scoreColor(Number(slide.individual_score) || 0) + '1A' }]}>
-                  <Text style={[styles.carouselSlideNum, { color: scoreColor(Number(slide.individual_score) || 0) }]}>
-                    {(Number(slide.individual_score) || 0).toFixed(1)}
-                  </Text>
-                </View>
-                <View style={styles.carouselSlideInfo}>
-                  <Text style={styles.carouselSlideTitle}>Slide {slide.slide_number}</Text>
-                  <Text style={styles.carouselSlideVerdict} numberOfLines={2}>{slide.verdict}</Text>
-                  {slide.one_fix ? (
-                    <Text style={styles.carouselSlideFix} numberOfLines={2}>Fix: {slide.one_fix}</Text>
-                  ) : null}
-                </View>
-              </View>
-            ))}
-
-            {/* Top 3 fixes */}
-            {carouselResult.top3Fixes.length > 0 && (
-              <>
-                <Text style={styles.carouselSubLabel}>Top Fixes</Text>
-                {carouselResult.top3Fixes.map((fix, i) => (
-                  <View key={i} style={styles.carouselFixRow}>
-                    <View style={styles.carouselFixBadge}>
-                      <Text style={styles.carouselFixBadgeText}>{i + 1}</Text>
-                    </View>
-                    <Text style={styles.carouselFixText}>{fix}</Text>
-                  </View>
-                ))}
-              </>
-            )}
-
-            {/* Personal hashtags */}
-            {personalHashtags.length > 0 && (
-              <>
-                <Text style={styles.carouselSubLabel}>Your Hashtags</Text>
-                <View style={styles.hashtagRow}>
-                  {personalHashtags.map((tag, i) => (
-                    <View key={i} style={styles.hashtagPill}>
-                      <Text style={styles.hashtagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            )}
-
-            {/* Per-platform caption rewrites (tabbed) */}
-            {carouselResult.captionRewrites && Object.values(carouselResult.captionRewrites).some(Boolean) && (
-              <>
-                <Text style={styles.carouselSubLabel}>Optimized Captions</Text>
-                {Array.from(platforms).length > 1 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.tabRow}
-                  >
-                    {Array.from(platforms).map((p) => {
-                      const hasCaption = !!carouselResult.captionRewrites?.[p];
-                      if (!hasCaption) return null;
-                      return (
-                        <TouchableOpacity
-                          key={p}
-                          style={[styles.tab, carouselCaptionTab === p && styles.tabActive]}
-                          onPress={() => {
-                            Haptics.selectionAsync();
-                            setCarouselCaptionTab(p);
-                          }}
-                        >
-                          <Text style={[styles.tabLabel, carouselCaptionTab === p && styles.tabLabelActive]}>
-                            {PLATFORM_LABELS[p as Platform] ?? p}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                )}
-                {(() => {
-                  const activeCaption = carouselResult.captionRewrites?.[carouselCaptionTab];
-                  if (!activeCaption) return null;
-                  return (
-                    <View style={styles.copyBox}>
-                      <Text style={styles.copyText}>{activeCaption}</Text>
-                      <View style={styles.copyActions}>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={async () => {
-                            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            const captionText = [
-                              activeCaption,
-                              personalHashtags.join(' '),
-                            ].filter(Boolean).join('\n\n');
-                            await Clipboard.setStringAsync(captionText);
-                            Alert.alert("Copied!", "Caption copied to clipboard.");
-                          }}
-                        >
-                          <Ionicons name="copy-outline" size={15} color={Colors.teal} />
-                          <Text style={styles.actionButtonText}>Copy caption</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })()}
-              </>
-            )}
-
-            {/* Best Times to Post — one block per selected carousel platform */}
-            {Array.from(platforms).some((p) => !!PLATFORM_OPTIMAL_TIMES[p]) && (
-              <View style={styles.optimalTimesSection}>
-                <Text style={styles.optimalTimesTitle}>Best Times to Post</Text>
-                {Array.from(platforms).map((p) => {
-                  const times = PLATFORM_OPTIMAL_TIMES[p];
-                  if (!times) return null;
-                  return (
-                    <View key={p} style={styles.optimalTimesPlatformBlock}>
-                      <Text style={styles.optimalTimesPlatform}>
-                        {PLATFORM_LABELS[p as Platform] ?? p}
-                      </Text>
-                      <View style={styles.optimalTimePills}>
-                        {times.map((t, i) => (
-                          <View key={i} style={styles.optimalTimePill}>
-                            <Text style={styles.optimalTimePillText}>{t}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
           </View>
         )}
 
@@ -2800,10 +2524,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sansSemibold,
     color: Colors.navy,
-    marginBottom: 10,
-  },
-  optimalTimesPlatformBlock: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   optimalTimesPlatform: {
     fontSize: FontSize.xs,
@@ -2811,7 +2532,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   optimalTimePills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   optimalTimePill: {
@@ -2885,144 +2606,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   slideEmptyLabelTeal: { color: Colors.teal },
-  slideZoneSelected: {
-    borderWidth: 2,
-    borderColor: Colors.teal,
-    opacity: 0.9,
-  },
-  slideSelectedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(14,165,160,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-  },
-  slideReorderHint: {
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.sans,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  carouselResultSection: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  carouselScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 16,
-  },
-  carouselScoreBadge: {
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: 'center',
-    minWidth: 90,
-  },
-  carouselScoreNum: {
-    fontSize: 32,
-    fontFamily: FontFamily.serif,
-  },
-  carouselScoreLabel: {
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.sansSemibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginTop: 2,
-  },
-  carouselScoreBreakdown: { flex: 1, gap: 3 },
-  carouselBreakdownRow: {
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sans,
-    color: Colors.textSecondary,
-  },
-  carouselBreakdownVal: {
-    fontFamily: FontFamily.sansSemibold,
-    color: Colors.textPrimary,
-  },
-  carouselSubLabel: {
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.sansSemibold,
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  carouselSlideRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  carouselSlideBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  carouselSlideNum: {
-    fontSize: 16,
-    fontFamily: FontFamily.serif,
-    fontWeight: '700',
-  },
-  carouselSlideInfo: { flex: 1 },
-  carouselSlideTitle: {
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sansSemibold,
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  carouselSlideVerdict: {
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sans,
-    color: Colors.textSecondary,
-  },
-  carouselSlideFix: {
-    fontSize: FontSize.xs,
-    fontFamily: FontFamily.sans,
-    color: Colors.scoreAmber,
-    marginTop: 2,
-  },
-  carouselFixRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginBottom: 8,
-  },
-  carouselFixBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  carouselFixBadgeText: {
-    fontSize: 11,
-    fontFamily: FontFamily.sansSemibold,
-    color: '#FFF',
-  },
-  carouselFixText: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sans,
-    color: Colors.textPrimary,
-    lineHeight: 20,
-  },
 });

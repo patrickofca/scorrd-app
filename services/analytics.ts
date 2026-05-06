@@ -5,7 +5,6 @@ export const posthog = new PostHog(
   {
     host: process.env.EXPO_PUBLIC_POSTHOG_HOST,
     captureAppLifecycleEvents: true,
-    debug: __DEV__,
     flushAt: 20,
     flushInterval: 10000,
   }

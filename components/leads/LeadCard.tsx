@@ -17,11 +17,15 @@ const C = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  New: C.teal,
-  Contacted: C.amber,
-  Qualified: C.green,
-  Closed: C.textSecondary,
+  new: C.teal,
+  contacted: C.amber,
+  qualified: C.green,
+  closed: C.textSecondary,
 };
+
+function capitalizeFirst(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 const INTEREST_COLOR: Record<string, string> = {
   Buyer: C.purple,
@@ -66,7 +70,7 @@ export default function LeadCard({ lead, onPress, onDelete, showSwipe = true }: 
     </TouchableOpacity>
   );
 
-  const status = lead.status ?? 'New';
+  const status = lead.status ?? 'new';
 
   const cardContent = (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -81,7 +85,7 @@ export default function LeadCard({ lead, onPress, onDelete, showSwipe = true }: 
         {lead.interest ? (
           <Badge label={lead.interest} color={INTEREST_COLOR[lead.interest] ?? C.navy} />
         ) : null}
-        <Badge label={status} color={STATUS_COLOR[status] ?? C.teal} />
+        <Badge label={capitalizeFirst(status)} color={STATUS_COLOR[status] ?? C.teal} />
       </View>
     </TouchableOpacity>
   );

@@ -38,7 +38,7 @@ function CapturePageSection({ user }: { user: NonNullable<ReturnType<typeof useA
     mutationFn: () => api.me.update({ capture_page_headline: headline.trim() || undefined }),
     onSuccess: (updated) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      useAuthStore.setState({ user: updated });
+      useAuthStore.getState().setUser(updated);
     },
     onError: (err) => {
       if (err instanceof AuthExpiredError) return;
@@ -69,10 +69,10 @@ function CapturePageSection({ user }: { user: NonNullable<ReturnType<typeof useA
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  New: Colors.teal,
-  Contacted: '#8B5CF6',
-  Qualified: Colors.scoreAmber,
-  Closed: Colors.scoreGreen,
+  new: Colors.teal,
+  contacted: '#8B5CF6',
+  qualified: Colors.scoreAmber,
+  closed: Colors.scoreGreen,
 };
 
 function LeadRow({ lead }: { lead: Lead }) {
@@ -86,7 +86,9 @@ function LeadRow({ lead }: { lead: Lead }) {
         </Text>
       </View>
       <View style={[styles.statusBadge, { borderColor: statusColor }]}>
-        <Text style={[styles.statusBadgeText, { color: statusColor }]}>{lead.status ?? 'New'}</Text>
+        <Text style={[styles.statusBadgeText, { color: statusColor }]}>
+          {lead.status ? lead.status.charAt(0).toUpperCase() + lead.status.slice(1) : 'New'}
+        </Text>
       </View>
     </View>
   );

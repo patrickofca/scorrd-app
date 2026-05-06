@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { posthog } from "../services/analytics";
 import { PostHogProvider } from "posthog-react-native";
 import {
@@ -356,21 +357,23 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <PostHogProvider
-      client={posthog}
-      autocapture={{ captureScreens: false, captureTouches: true }}
-    >
-      <QueryClientProvider client={queryClient}>
-        <ScreenTracker />
-        <AuthGate />
-        <TokenGuard />
-        <Analytics />
-        <PushSetup />
-        <NotificationTapHandler />
-        <Stack screenOptions={{ headerShown: false }} />
-        <NotificationBanner />
-      </QueryClientProvider>
-    </PostHogProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PostHogProvider
+        client={posthog}
+        autocapture={{ captureScreens: false, captureTouches: true }}
+      >
+        <QueryClientProvider client={queryClient}>
+          <ScreenTracker />
+          <AuthGate />
+          <TokenGuard />
+          <Analytics />
+          <PushSetup />
+          <NotificationTapHandler />
+          <Stack screenOptions={{ headerShown: false }} />
+          <NotificationBanner />
+        </QueryClientProvider>
+      </PostHogProvider>
+    </GestureHandlerRootView>
   );
 }
 

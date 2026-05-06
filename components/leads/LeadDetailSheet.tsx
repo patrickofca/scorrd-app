@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import type { Lead } from '../../types';
 
 const C = {
@@ -27,14 +28,21 @@ const C = {
   amber: '#D97706',
 };
 
-const STATUSES = ['New', 'Contacted', 'Qualified', 'Closed'] as const;
+const STATUSES = ['new', 'contacted', 'qualified', 'closed'] as const;
 type LeadStatus = (typeof STATUSES)[number];
 
+const STATUS_LABEL: Record<LeadStatus, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  qualified: 'Qualified',
+  closed: 'Closed',
+};
+
 const STATUS_COLOR: Record<LeadStatus, string> = {
-  New: C.teal,
-  Contacted: C.amber,
-  Qualified: C.green,
-  Closed: C.textSecondary,
+  new: C.teal,
+  contacted: C.amber,
+  qualified: C.green,
+  closed: C.textSecondary,
 };
 
 interface Props {
@@ -46,12 +54,12 @@ interface Props {
 }
 
 export default function LeadDetailSheet({ lead, visible, onClose, onSave, isSaving }: Props) {
-  const [status, setStatus] = useState<LeadStatus>('New');
+  const [status, setStatus] = useState<LeadStatus>('new');
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (lead) {
-      setStatus((lead.status as LeadStatus) ?? 'New');
+      setStatus((lead.status as LeadStatus) ?? 'new');
       setNotes(lead.note ?? '');
     }
   }, [lead?.id]);
@@ -73,8 +81,24 @@ export default function LeadDetailSheet({ lead, visible, onClose, onSave, isSavi
         >
           <View style={styles.sheet}>
             <View style={styles.handle} />
+            <View style={styles.sheetHeader}>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.backBtn}
+              >
+                <Ionicons name="chevron-back" size={22} color={C.navy} />
+              </TouchableOpacity>
+              <Text style={styles.leadName} numberOfLines={1}>{lead.name ?? 'Unknown'}</Text>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.closeBtn}
+              >
+                <Text style={styles.closeBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <Text style={styles.leadName}>{lead.name ?? 'Unknown'}</Text>
 
               {lead.email ? (
                 <TouchableOpacity
@@ -130,7 +154,7 @@ export default function LeadDetailSheet({ lead, visible, onClose, onSave, isSavi
                         status === s && { color: STATUS_COLOR[s], fontWeight: '600' },
                       ]}
                     >
-                      {s}
+                      {STATUS_LABEL[s]}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -184,7 +208,27 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 20,
   },
-  leadName: { fontSize: 22, fontWeight: '700', color: C.navy, marginBottom: 16 },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: { fontSize: 16, color: C.textSecondary },
+  scrollBody: { flex: 1 },
+  leadName: { fontSize: 20, fontWeight: '700', color: C.navy, flex: 1, paddingHorizontal: 8 },
   contactRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

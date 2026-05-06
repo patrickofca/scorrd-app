@@ -35,12 +35,22 @@ const INTEREST_COLOR: Record<Interest, string> = {
   Investor: C.green,
 };
 
+const PLATFORMS = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'twitter', label: 'X' },
+  { value: 'tiktok', label: 'TikTok' },
+] as const;
+type LeadPlatform = typeof PLATFORMS[number]['value'];
+
 interface AddLeadData {
   name: string;
   email?: string;
   phone?: string;
   interest?: string;
   message?: string;
+  platform: string;
 }
 
 interface Props {
@@ -56,6 +66,7 @@ export default function AddLeadModal({ visible, onClose, onSave, isSaving }: Pro
   const [phone, setPhone] = useState('');
   const [interest, setInterest] = useState<Interest | null>(null);
   const [message, setMessage] = useState('');
+  const [platform, setPlatform] = useState<LeadPlatform>('instagram');
 
   const reset = () => {
     setName('');
@@ -63,6 +74,7 @@ export default function AddLeadModal({ visible, onClose, onSave, isSaving }: Pro
     setPhone('');
     setInterest(null);
     setMessage('');
+    setPlatform('instagram');
   };
 
   const handleClose = () => {
@@ -82,6 +94,7 @@ export default function AddLeadModal({ visible, onClose, onSave, isSaving }: Pro
       phone: phone.trim() || undefined,
       interest: interest ?? undefined,
       message: message.trim() || undefined,
+      platform,
     });
     reset();
   };
@@ -133,6 +146,27 @@ export default function AddLeadModal({ visible, onClose, onSave, isSaving }: Pro
                 placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
               />
+
+              <Text style={styles.label}>Platform</Text>
+              <View style={styles.pillRow}>
+                {PLATFORMS.map((p) => {
+                  const active = platform === p.value;
+                  return (
+                    <TouchableOpacity
+                      key={p.value}
+                      style={[styles.pill, active && { backgroundColor: C.teal + '1A', borderColor: C.teal }]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setPlatform(p.value);
+                      }}
+                    >
+                      <Text style={[styles.pillText, active && { color: C.teal, fontWeight: '600' }]}>
+                        {p.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               <Text style={styles.label}>Interest</Text>
               <View style={styles.pillRow}>

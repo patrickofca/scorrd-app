@@ -16,10 +16,10 @@ const C = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  New: C.teal,
-  Contacted: C.amber,
-  Qualified: C.green,
-  Closed: C.textSecondary,
+  new: C.teal,
+  contacted: C.amber,
+  qualified: C.green,
+  closed: C.textSecondary,
 };
 
 interface Props {

@@ -275,7 +275,13 @@ export default function AnalyzeScreen() {
             <TouchableOpacity
               key={m}
               style={[styles.modePill, mode === m && styles.modePillSelected]}
-              onPress={() => { Haptics.selectionAsync(); setMode(m); }}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setMode(m);
+                if (m === 'carousel' && (platform === 'twitter' || platform === 'tiktok')) {
+                  setPlatform('instagram');
+                }
+              }}
               activeOpacity={0.7}
             >
               <Text style={[styles.modePillLabel, mode === m && styles.modePillLabelSelected]}>
@@ -293,7 +299,10 @@ export default function AnalyzeScreen() {
           style={styles.pillRow}
           contentContainerStyle={styles.pillContent}
         >
-          {PLATFORMS.map((p) => (
+          {(mode === 'carousel'
+            ? PLATFORMS.filter((p) => p !== 'twitter' && p !== 'tiktok')
+            : PLATFORMS
+          ).map((p) => (
             <PlatformPill
               key={p}
               platform={p}

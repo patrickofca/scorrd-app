@@ -30,7 +30,7 @@ export default function ProfileSection({ user }: Props) {
       }),
     onSuccess: (updated) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      useAuthStore.setState({ user: updated });
+      useAuthStore.getState().setUser(updated);
       setAvatarBase64(null);
     },
     onError: (err) => {

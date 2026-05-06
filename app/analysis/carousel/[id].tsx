@@ -127,7 +127,6 @@ export default function CarouselResultScreen() {
             <View style={styles.ringSection}>
               <ScoreRing
                 score={data.carouselCompositeScore ?? 0}
-                color={scoreColor(data.carouselCompositeScore ?? 0)}
                 size={160}
                 strokeWidth={14}
               />
@@ -145,7 +144,6 @@ export default function CarouselResultScreen() {
                 <View key={dim.label} style={styles.dimCard}>
                   <ScoreRing
                     score={dim.score}
-                    color={scoreColor(dim.score)}
                     size={60}
                     strokeWidth={6}
                   />

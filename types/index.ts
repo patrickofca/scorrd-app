@@ -136,6 +136,7 @@ export interface ReelScriptResult {
   caption: string;
   hashtags: string[];
   tiktok_repurpose_hook?: string;
+  facebook_repurpose_hook?: string;
 }
 
 export interface GenerateReelResponse {
@@ -286,6 +287,6 @@ export interface CarouselAnalysis {
   top3Fixes: string[];
   recommendedSlideOrder: number[] | null;
   reorderRationale: string | null;
-  captionRewrites: { instagram: string | null } | null;
+  captionRewrites: Record<string, string | null> | null;
   createdAt: string;
 }

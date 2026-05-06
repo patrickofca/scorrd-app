@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Link } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -63,7 +64,7 @@ export default function RegisterScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.header}>
-          <Text style={styles.wordmark}>Scorrd</Text>
+          <Image source={require('../../assets/Scorrd_logo.png')} style={styles.logo} resizeMode="contain" />
           <Text style={styles.tagline}>Start your free 14-day trial</Text>
         </View>
 
@@ -138,17 +139,23 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: Colors.offWhite },
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { marginBottom: 48, alignItems: 'center' },
-  wordmark: {
-    fontSize: 40,
-    fontFamily: FontFamily.serif,
-    color: Colors.navy,
-    letterSpacing: -1,
+  logo: {
+    width: 160,
+    height: 160,
+    borderRadius: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    marginBottom: 8,
   },
   tagline: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sans,
     color: Colors.textSecondary,
-    marginTop: 8,
+    marginTop: 6,
+    letterSpacing: 0.2,
   },
   form: { gap: 12 },
   label: {

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { api } from '../../services/api';
@@ -26,7 +26,7 @@ import AddLeadModal from '../../components/leads/AddLeadModal';
 import PipelineColumn from '../../components/leads/PipelineColumn';
 import CapturePageCard from '../../components/leads/CapturePageCard';
 
-const PIPELINE_STATUSES = ['New', 'Contacted', 'Qualified', 'Closed'];
+const PIPELINE_STATUSES = ['new', 'contacted', 'qualified', 'closed'];
 
 type ViewMode = 'list' | 'pipeline';
 
@@ -48,6 +48,7 @@ function EmptyState() {
 
 export default function LeadsScreen() {
   const { height } = useWindowDimensions();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const captureUrl = `https://scorrd.app/agent/${user?.slug ?? user?.id ?? ''}`;
@@ -77,9 +78,22 @@ export default function LeadsScreen() {
   const updateMutation = useMutation({
     mutationFn: ({ id, d }: { id: string; d: { status: string; note: string } }) =>
       api.leads.update(id, d),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['leads'], (old: any) => {
+        if (!old?.pages) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            leads: page.leads.map((l: any) => (l.id === updated.id ? updated : l)),
+          })),
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       setSelectedLead(null);
+    },
+    onError: (err) => {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not update lead. Please try again.');
     },
   });
 
@@ -89,6 +103,9 @@ export default function LeadsScreen() {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       setAddVisible(false);
       posthog.capture('lead_captured', { source: 'manual' });
+    },
+    onError: (err) => {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Could not save lead. Please try again.');
     },
   });
 
@@ -112,6 +129,15 @@ export default function LeadsScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <View style={styles.header}>
+        {router.canGoBack() && (
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.backBtn}
+          >
+            <Ionicons name="chevron-back" size={24} color={Colors.navy} />
+          </TouchableOpacity>
+        )}
         <Text style={styles.heading}>Leads</Text>
         {allLeads.length > 0 && (
           <View style={styles.countBadge}>
@@ -210,7 +236,7 @@ export default function LeadsScreen() {
       <AddLeadModal
         visible={addVisible}
         onClose={() => setAddVisible(false)}
-        onSave={(d) => createMutation.mutate({ ...d, platform: 'Manual' })}
+        onSave={(d) => createMutation.mutate(d)}
         isSaving={createMutation.isPending}
       />
     </SafeAreaView>
@@ -226,6 +252,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     gap: 10,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -6,
   },
   heading: {
     fontSize: FontSize['2xl'],

@@ -186,6 +186,8 @@ export const api = {
       include_hashtags: boolean;
       listing_price_range?: string;
       target_buyer_type?: string[];
+      market_location?: string;
+      brokerage_name?: string;
     }) =>
       request<GenerateResponse>('/generate', {
         method: 'POST',
@@ -271,6 +273,7 @@ export const api = {
     analyze: (data: {
       slides: { imageBase64: string; mediaType: string }[];
       caption?: string;
+      platforms?: string[];
       content_type: string;
       listing_price_range?: string;
       target_buyer_type?: string[];

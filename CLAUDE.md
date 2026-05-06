@@ -231,6 +231,18 @@ types/           index.ts
 - Supabase Postgres via Prisma on scorrd-api (separate repo)
 - No schema changes applied from this frontend repo
 
+## Bug Fixes Applied
+- **Profile persistence** — `ProfileSection` and `CapturePageSection` now call `setUser()` instead of `setState()` so updated fields (market, brokerage, headline) are written to SecureStore and survive sign-out/sign-in
+- **Lead creation** — `AddLeadModal` now includes a platform selector (Instagram/Facebook/LinkedIn/X/TikTok, default Instagram); `leads.tsx` passes the selected platform instead of the invalid hardcoded `'Manual'` value; `createMutation` surfaces API errors via Alert
+- **Duplicate leads route** — deleted `app/leads/index.tsx` (old duplicate with broken `platform: 'Manual'`); `app/(tabs)/leads.tsx` is the sole active screen
+- **Lead detail navigation** — `LeadDetailSheet` header now has a chevron-back (←) on the left and ✕ on the right; both call `onClose()`
+- **Analyze carousel platforms** — carousel mode on Analyze tab filters out X (twitter) and TikTok; switching to carousel auto-resets selection if needed
+- **Generate button label** — carousel mode button now reads "Generate Carousel" (was "Analyze Carousel")
+- **Generate post profile data** — `handleGenerate()` now passes `market_location` from `user.marketLocation` to the API alongside `agent_name` and `brokerage_name`
+- **Reel TikTok repurpose block** — label updated to "TikTok Repurpose Hook", subtitle added, hook text shown in distinct container with teal left border
+- **Reel Facebook repurpose block** — added `facebook_repurpose_hook` to `ReelScriptResult` type; renders identical block after TikTok hook when field is present in API response
+- **Best Times to Post** — now shows one time block per selected platform (all platforms in the `platforms` Set), not just the active tab
+
 ## What Is NOT Built Yet
 - Conditional rewrite logic (score >= 7.5 → preservation_note, no rewrites)
 - Video analyzer (Phase 5)
