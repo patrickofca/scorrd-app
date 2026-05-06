@@ -14,11 +14,12 @@
       "backgroundColor": "#1C2B3A"
     },
     "ios": {
-      "bundleIdentifier": "com.scorrd.app",
+      "bundleIdentifier": "com.patrickruggeri.scorrd",
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Scorrd needs access to your photo library to analyze listing images.",
-        "NSCameraUsageDescription": "Scorrd needs camera access to capture listing photos for analysis."
+        "NSCameraUsageDescription": "Scorrd needs camera access to capture listing photos for analysis.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
