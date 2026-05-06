@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "scorrd",
+    "name": "Scorrd",
     "slug": "scorrd",
+    "scheme": "scorrd",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,19 +11,37 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1C2B3A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Scorrd needs access to your photo library to analyze listing images.",
+        "NSCameraUsageDescription": "Scorrd needs camera access to capture listing photos for analysis."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1C2B3A"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA"
+      ]
     },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Scorrd needs access to your photo library to analyze listing images."
+        }
+      ],
+      "expo-font"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }
