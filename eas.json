@@ -1,7 +1,8 @@
 {
   "cli": {
     "version": ">= 18.7.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "remote",
+    "promptToConfigurePushNotifications": false
   },
   "build": {
     "development": {
@@ -22,6 +23,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6767100592",
+        "ascApiKeyPath": "./AuthKey_J843PL23J4.p8",
+        "ascApiKeyId": "J843PL23J4",
+        "ascApiKeyIssuerId": "3d55aafa-5744-42f3-a2ec-f4554e90bf1f"
+      }
+    }
   }
 }

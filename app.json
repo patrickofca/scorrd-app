@@ -5,7 +5,7 @@
     "scheme": "scorrd",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/scorrd_app_badge.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -15,6 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.patrickruggeri.scorrd",
+      "buildNumber": "2",
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Scorrd needs access to your photo library to analyze listing images.",
