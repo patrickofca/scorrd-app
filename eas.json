@@ -11,6 +11,7 @@
     },
     "preview": {
       "distribution": "store",
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://scorrd-api-production.up.railway.app"
       }
