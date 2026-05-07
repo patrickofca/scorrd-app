@@ -125,9 +125,9 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { marginBottom: 48, alignItems: 'center' },
   logo: {
-    width: 110,
-    height: 110,
-    borderRadius: 24,
+    width: 140,
+    height: 140,
+    borderRadius: 28,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
