@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { api } from "../../services/api";
+import { api, AuthExpiredError } from "../../services/api";
 import { posthog } from "../../services/analytics";
 import { Colors } from "../../constants/colors";
 import { FontFamily, FontSize } from "../../constants/typography";
@@ -85,8 +85,8 @@ export default function MonthCalendarScreen() {
         analysis_id: analysisId,
         suggestion_count: res.suggestions.length,
       });
-    } catch {
-      setError(true);
+    } catch (err) {
+      if (!(err instanceof AuthExpiredError)) setError(true);
     } finally {
       setLoading(false);
     }
@@ -137,7 +137,8 @@ export default function MonthCalendarScreen() {
         : scheduleDate === 1 ? "tomorrow"
         : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
       Alert.alert("Scheduled!", `Added to your calendar for ${dateLabel} at ${scheduleTime}.`);
-    } catch {
+    } catch (err) {
+      if (err instanceof AuthExpiredError) return;
       Alert.alert("Failed", "Could not schedule this post. Please try again.");
     } finally {
       setScheduling(false);

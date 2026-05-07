@@ -181,6 +181,7 @@ export default function AnalyzeScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push(`/analysis/carousel/${res.carouselAnalysis.id}`);
     } catch (err) {
+      if (err instanceof AuthExpiredError) return;
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Analysis failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {

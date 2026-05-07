@@ -19,7 +19,8 @@ import { Colors, scoreColor } from '../../../constants/colors';
 import { FontFamily, FontSize } from '../../../constants/typography';
 import { ScoreRing } from '../../../components/ScoreRing';
 import { InfoCallout } from '../../../components/InfoCallout';
-import { api } from '../../../services/api';
+import { api, AuthExpiredError } from '../../../services/api';
+import { useAuthStore } from '../../../store/authStore';
 import type { SlideScore } from '../../../types';
 
 function dimensionVerdict(score: number): string {
@@ -47,10 +48,16 @@ export default function CarouselResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [selectedSlide, setSelectedSlide] = useState<{ score: SlideScore; uri: string } | null>(null);
+
+  useEffect(() => {
+    if (error instanceof AuthExpiredError) {
+      useAuthStore.getState().expireSession();
+    }
+  }, [error]);
   const [showReorder, setShowReorder] = useState(true);
   const [captionCopied, setCaptionCopied] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['carousel', id],
     queryFn: async () => {
       const res = await api.carousel.get(id);
@@ -114,10 +121,16 @@ export default function CarouselResultScreen() {
 
         {isError && (
           <View style={styles.errorState}>
-            <Text style={styles.errorText}>Failed to load analysis.</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
-              <Text style={styles.retryText}>Retry</Text>
-            </TouchableOpacity>
+            <Text style={styles.errorText}>
+              {error instanceof AuthExpiredError
+                ? 'Session expired — redirecting to sign in...'
+                : 'Failed to load analysis.'}
+            </Text>
+            {!(error instanceof AuthExpiredError) && (
+              <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
