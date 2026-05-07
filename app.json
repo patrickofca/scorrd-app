@@ -18,9 +18,9 @@
       "buildNumber": "2",
       "supportsTablet": false,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Scorrd needs access to your photo library to analyze listing images.",
-        "NSCameraUsageDescription": "Scorrd needs camera access to capture listing photos for analysis.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Scorrd needs camera access to capture listing photos for analysis."
       }
     },
     "android": {
