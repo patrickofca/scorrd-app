@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Link } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -51,7 +52,11 @@ export default function LoginScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.header}>
-          <Text style={styles.wordmark}>Scorrd</Text>
+          <Image
+            source={require('../../assets/scorrd_app_badge.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.tagline}>Know your score. Own your market.</Text>
           {sessionExpired && (
             <View style={styles.expiredBanner}>
@@ -119,11 +124,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: Colors.offWhite },
   container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { marginBottom: 48, alignItems: 'center' },
-  wordmark: {
-    fontSize: 40,
-    fontFamily: FontFamily.serif,
-    color: Colors.navy,
-    letterSpacing: -1,
+  logo: {
+    width: 110,
+    height: 110,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    marginBottom: 4,
   },
   tagline: {
     fontSize: FontSize.sm,

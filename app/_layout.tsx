@@ -4,7 +4,6 @@ import { PostHogProvider } from "posthog-react-native";
 import {
   Animated,
   AppState,
-  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -264,72 +263,6 @@ function NotificationTapHandler() {
   return null;
 }
 
-// ─── Billing success deep-link handler ───────────────────────────────────────
-
-function BillingSuccessHandler() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const [visible, setVisible] = useState(false);
-  const translateY = useRef(new Animated.Value(-120)).current;
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showBanner = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    setVisible(true);
-    Animated.spring(translateY, {
-      toValue: insets.top,
-      useNativeDriver: true,
-      bounciness: 4,
-    }).start();
-    hideTimer.current = setTimeout(() => {
-      Animated.timing(translateY, {
-        toValue: -120,
-        duration: 280,
-        useNativeDriver: true,
-      }).start(() => setVisible(false));
-    }, 4000);
-  };
-
-  useEffect(() => {
-    const handleUrl = ({ url }: { url: string }) => {
-      if (!url.startsWith("scorrd://billing/success")) return;
-      // Wait 2s for the Stripe webhook to commit the plan change before re-fetching
-      setTimeout(() => {
-        if (!useAuthStore.getState().accessToken) return;
-        api.me
-          .get()
-          .then((freshUser) => {
-            useAuthStore.getState().setUser(freshUser);
-            router.replace("/(tabs)/generate");
-            showBanner();
-          })
-          .catch(() => {});
-      }, 2000);
-    };
-
-    const sub = Linking.addEventListener("url", handleUrl);
-    return () => {
-      sub.remove();
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
-  }, []);
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View
-      style={[styles.banner, { transform: [{ translateY }] }]}
-      pointerEvents="none"
-    >
-      <View style={[styles.bannerDot, { backgroundColor: "#16A34A" }]} />
-      <View style={styles.bannerText}>
-        <Text style={styles.bannerTitle}>Plan Upgraded!</Text>
-        <Text style={styles.bannerBody}>Your subscription is now active.</Text>
-      </View>
-    </Animated.View>
-  );
-}
-
 // ─── Foreground notification banner ──────────────────────────────────────────
 
 function NotificationBanner() {
@@ -434,7 +367,6 @@ export default function RootLayout() {
         <Analytics />
         <PushSetup />
         <NotificationTapHandler />
-        <BillingSuccessHandler />
         <Stack screenOptions={{ headerShown: false }} />
         <NotificationBanner />
       </QueryClientProvider>
