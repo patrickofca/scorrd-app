@@ -158,6 +158,58 @@ const PLATFORM_PHOTO_TIPS: Record<string, { tips: string[]; avoid: string[] }> =
     },
   };
 
+function ExpandedReelHistory({ script }: { script: ReelScriptResult }) {
+  return (
+    <View style={styles.reelHistoryExpanded}>
+      <View style={styles.reelHistoryBlock}>
+        <Text style={styles.reelHistoryBlockLabel}>Hook</Text>
+        <Text style={styles.reelHistoryHookLine}>{script.hook_line}</Text>
+        <Text style={styles.reelHistoryMeta}>{script.hook_direction}</Text>
+      </View>
+
+      {script.scenes.map((scene) => (
+        <View key={scene.scene_number} style={styles.reelHistoryBlock}>
+          <Text style={styles.reelHistoryBlockLabel}>
+            Scene {scene.scene_number} · {scene.duration_seconds}s · {scene.location}
+          </Text>
+          <Text style={styles.reelHistorySceneShow}>{scene.what_to_show}</Text>
+          <Text style={styles.reelHistorySceneSay}>{scene.what_to_say}</Text>
+          <Text style={styles.reelHistoryMeta}>{scene.delivery_note}</Text>
+        </View>
+      ))}
+
+      <View style={styles.reelHistoryBlock}>
+        <Text style={styles.reelHistoryBlockLabel}>Close CTA</Text>
+        <Text style={styles.reelHistorySceneSay}>{script.close_cta}</Text>
+      </View>
+
+      <View style={styles.reelHistoryBlock}>
+        <Text style={styles.reelHistoryBlockLabel}>Caption</Text>
+        <Text style={styles.reelHistoryCaptionText}>{script.caption}</Text>
+      </View>
+
+      {script.hashtags.length > 0 && (
+        <View style={styles.hashtagRow}>
+          {script.hashtags.map((tag, i) => (
+            <View key={i} style={styles.hashtagPill}>
+              <Text style={styles.hashtagText}>
+                {tag.startsWith("#") ? tag : `#${tag}`}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {script.tiktok_repurpose_hook ? (
+        <View style={styles.reelHistoryBlock}>
+          <Text style={styles.reelHistoryBlockLabel}>TikTok Repurpose Hook</Text>
+          <Text style={styles.reelHistorySceneSay}>{script.tiktok_repurpose_hook}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function GenerateScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -1387,7 +1439,7 @@ export default function GenerateScreen() {
                   </View>
                   <Text
                     style={styles.historyPreview}
-                    numberOfLines={expanded ? undefined : 2}
+                    numberOfLines={!expanded || post.isReelScript ? 2 : undefined}
                   >
                     {post.isReelScript
                       ? (() => {
@@ -1400,7 +1452,15 @@ export default function GenerateScreen() {
                         })()
                       : post.generatedCopy}
                   </Text>
-                  {expanded && post.hashtags.length > 0 && (
+                  {expanded && post.isReelScript && (() => {
+                    try {
+                      const s = JSON.parse(post.generatedCopy) as ReelScriptResult;
+                      return <ExpandedReelHistory script={s} />;
+                    } catch {
+                      return null;
+                    }
+                  })()}
+                  {expanded && !post.isReelScript && post.hashtags.length > 0 && (
                     <View style={styles.hashtagRow}>
                       {post.hashtags.map((tag, i) => (
                         <View key={i} style={styles.hashtagPill}>
@@ -2533,4 +2593,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   slideEmptyLabelTeal: { color: Colors.teal },
+
+  // Expanded reel history
+  reelHistoryExpanded: { gap: 8, marginTop: 10 },
+  reelHistoryBlock: {
+    backgroundColor: Colors.offWhite,
+    borderRadius: 8,
+    padding: 10,
+    gap: 4,
+  },
+  reelHistoryBlockLabel: {
+    fontSize: 10,
+    fontFamily: FontFamily.sansSemibold,
+    color: Colors.teal,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  reelHistoryHookLine: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.serif,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  reelHistoryMeta: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.sans,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+    fontStyle: "italic",
+  },
+  reelHistorySceneShow: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.sans,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+    fontStyle: "italic",
+  },
+  reelHistorySceneSay: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sansMedium,
+    color: Colors.textPrimary,
+    lineHeight: 18,
+  },
+  reelHistoryCaptionText: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sans,
+    color: Colors.textPrimary,
+    lineHeight: 18,
+  },
 });
