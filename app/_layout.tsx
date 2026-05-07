@@ -268,6 +268,7 @@ function NotificationTapHandler() {
 
 function BillingSuccessHandler() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [visible, setVisible] = useState(false);
   const translateY = useRef(new Animated.Value(-120)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -299,6 +300,7 @@ function BillingSuccessHandler() {
           .get()
           .then((freshUser) => {
             useAuthStore.getState().setUser(freshUser);
+            router.replace("/(tabs)/generate");
             showBanner();
           })
           .catch(() => {});
