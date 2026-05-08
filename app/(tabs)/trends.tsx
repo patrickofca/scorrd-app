@@ -127,7 +127,9 @@ export default function TrendsScreen() {
     setError(null);
     setData(null);
     try {
-      const result = await api.trends.get(p);
+      const result = p === 'twitter'
+        ? await api.trends.refresh(p)
+        : await api.trends.get(p);
       setData(result);
     } catch {
       setError('Could not load trends. Tap refresh to try again.');
