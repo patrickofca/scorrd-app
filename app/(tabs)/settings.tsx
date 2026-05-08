@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -137,6 +137,13 @@ function LeadPipelineSection() {
 export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.clearSession);
+
+  useEffect(() => {
+    if (!useAuthStore.getState().accessToken) return;
+    api.me.get()
+      .then((fresh) => useAuthStore.getState().setUser(fresh))
+      .catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
