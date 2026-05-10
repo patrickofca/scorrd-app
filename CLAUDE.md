@@ -102,7 +102,7 @@ types/           index.ts
 ### Onboarding (app/onboarding.tsx)
 - Shows ONCE on first login/registration — never again
 - Persisted via SecureStore key `scorrd.onboarding.v1.seen`
-- Content: Scorrd logo (72px), "AI that grades your posts." headline, subhead, real `ScoreRing` (score=8.4, size=160, strokeWidth=14) + COMPOSITE SCORE / INSTAGRAM · NEW LISTING labels, 2×2 `ScoreCard` grid with static scores (Virality 9.1 / Follower Attraction 8.2 / Lead Capture 7.8 / Trust 8.6), CTA button, Skip link
+- Content: Scorrd logo (72px), headline, subhead, worldview line *"Likes are a hobby. Leads are a business."* (italic teal, below subhead), example post card, real `ScoreRing` (score=8.4, size=160, strokeWidth=14) + COMPOSITE SCORE / INSTAGRAM · NEW LISTING labels, 2×2 `ScoreCard` grid with static scores (Virality 9.1 / Follower Attraction 8.2 / Lead Capture 7.8 / Trust 8.6), CTA button, Skip link
 - CTA "Score my first post →": sets flag + pre-fills Score tab textarea with sample realtor post via `preFillStore.set()`, navigates to `/(tabs)/analyze`
 - Skip: sets flag, navigates to `/(tabs)/analyze` empty
 - **AuthGate trigger logic** (`_layout.tsx`):
@@ -183,6 +183,12 @@ types/           index.ts
   - Flow: tap → call endpoint → get image URL → `Share.share()` with pre-filled text "I scored [X.X] on Scorrd — the AI that grades realtor posts. Try it: scorrd.app"
   - Add `api.analyses.shareCard(id)` to `services/api.ts`
   - Backend returns single image URL; user picks destination (Stories vs feed) after share sheet opens
+  - **Visual hierarchy spec for Sharp template (scorrd-api):**
+    - Lead Capture score = hero number (2× font size of other dimensions), teal accent
+    - Below Lead Capture: contextual line — "meaning it'll actually generate DMs" if score ≥ 7.0, "this post needs work to generate leads" if score < 7.0
+    - Lead Capture label → "Lead Capture Score" with subtitle "The metric that pays." (small, teal)
+    - Composite score → demoted to top-right corner or secondary label "Overall: X.X"
+    - Other 3 dimensions (Virality, Follower Attraction, Trust & Authority) — equal weight to each other, subordinate to Lead Capture
 - Agency tier on billing/plans.tsx — 4th plan card needed
 - Agent Settings section (Phase 6 — enable/disable agent, config)
 - app/agent/chat.tsx — Saturday intake chat screen
