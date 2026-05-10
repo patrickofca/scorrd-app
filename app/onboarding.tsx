@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
+import { ScoreRing } from '../components/ScoreRing';
+import { ScoreCard } from '../components/ScoreCard';
 import { usePreFillStore } from '../store/preFillStore';
 import { Colors } from '../constants/colors';
 import { FontFamily, FontSize } from '../constants/typography';
@@ -19,16 +22,10 @@ const ONBOARDING_KEY = 'scorrd.onboarding.v1.seen';
 const SAMPLE_POST =
   "Just listed! 3BR/2BA in Oak Park. $649K. DM for showings 🏡✨ #realestate #justlisted #realtor";
 
-const DIMENSIONS = [
-  { label: 'Virality', score: 9.1 },
-  { label: 'Lead Capture', score: 7.8 },
-  { label: 'Follower Attraction', score: 8.2 },
-  { label: 'Trust & Authority', score: 8.6 },
-];
-
 export default function OnboardingScreen() {
   const router = useRouter();
   const handled = useRef(false);
+  const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
 
   async function markSeen(draft?: string) {
     if (handled.current) return;
@@ -61,24 +58,43 @@ export default function OnboardingScreen() {
         style={styles.logo}
         resizeMode="contain"
       />
-
       <Text style={styles.headline}>AI that grades your posts.</Text>
       <Text style={styles.subhead}>
         Paste any post. Get a score in 13 seconds.{'\n'}Know exactly what to fix.
       </Text>
 
-      <View style={styles.scoreCard}>
-        <View style={styles.scoreCircle}>
-          <Text style={styles.scoreValue}>8.4</Text>
-          <Text style={styles.scoreCircleLabel}>Composite Score</Text>
+      {/* Composite score ring — identical to analysis/[id].tsx */}
+      <View style={styles.scoreSection}>
+        <ScoreRing score={8.4} size={160} strokeWidth={14} />
+        <Text style={styles.scoreLabel}>Composite Score</Text>
+        <Text style={styles.postPlatform}>INSTAGRAM · NEW LISTING</Text>
+      </View>
+
+      {/* Why can't I score a 10? */}
+      <TouchableOpacity
+        style={styles.scoreInfoToggle}
+        onPress={() => { Haptics.selectionAsync(); setScoreInfoOpen(v => !v); }}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.scoreInfoToggleLabel}>Why can't I score a 10?</Text>
+        <Ionicons
+          name={scoreInfoOpen ? 'chevron-up' : 'chevron-down'}
+          size={16}
+          color={Colors.textSecondary}
+        />
+      </TouchableOpacity>
+
+      {/* Dimension cards — 2×2 grid, identical layout to analysis/[id].tsx */}
+      <Text style={styles.sectionTitle}>Dimension Scores</Text>
+      <Text style={styles.sectionSub}>Tap a card to see Scorrd's reasoning</Text>
+      <View style={styles.cardGrid}>
+        <View style={styles.cardRow}>
+          <ScoreCard title="Virality" score={9.1} weight="25% weight" evidence={[]} />
+          <ScoreCard title="Follower Attraction" score={8.2} weight="20% weight" evidence={[]} />
         </View>
-        <View style={styles.dimensions}>
-          {DIMENSIONS.map(({ label, score }) => (
-            <View key={label} style={styles.dimRow}>
-              <Text style={styles.dimLabel}>{label}</Text>
-              <Text style={styles.dimScore}>{score.toFixed(1)}</Text>
-            </View>
-          ))}
+        <View style={styles.cardRow}>
+          <ScoreCard title="Lead Capture" score={7.8} weight="35% weight" evidence={[]} />
+          <ScoreCard title="Trust & Authority" score={8.6} weight="20% weight" evidence={[]} />
         </View>
       </View>
 
@@ -96,17 +112,16 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.offWhite },
   container: {
-    flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
+    padding: 20,
     paddingBottom: 48,
   },
   logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
-    marginBottom: 24,
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    marginTop: 60,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
@@ -118,7 +133,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.serif,
     color: Colors.navy,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subhead: {
     fontSize: FontSize.sm,
@@ -126,68 +141,59 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 28,
+    marginBottom: 8,
   },
-  scoreCard: {
-    width: '100%',
+  // Copied exactly from analysis/[id].tsx
+  scoreSection: { alignItems: 'center', paddingVertical: 24 },
+  scoreLabel: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sansSemibold,
+    color: Colors.textSecondary,
+    marginTop: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  postPlatform: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.mono,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  scoreInfoToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    marginBottom: 24,
+    width: '100%',
   },
-  scoreCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 7,
-    borderColor: Colors.scoreGreen,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  scoreValue: {
-    fontSize: 34,
-    fontFamily: FontFamily.serif,
-    color: Colors.scoreGreen,
-    lineHeight: 38,
-  },
-  scoreCircleLabel: {
-    fontSize: 9,
+  scoreInfoToggleLabel: {
+    fontSize: FontSize.sm,
     fontFamily: FontFamily.sansMedium,
     color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
   },
-  dimensions: {
-    width: '100%',
-    gap: 10,
-  },
-  dimRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  dimLabel: {
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sans,
-    color: Colors.textPrimary,
-  },
-  dimScore: {
-    fontSize: FontSize.sm,
+  sectionTitle: {
+    fontSize: FontSize.md,
     fontFamily: FontFamily.serif,
-    color: Colors.scoreGreen,
+    color: Colors.navy,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
   },
+  sectionSub: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.sans,
+    color: Colors.textSecondary,
+    marginBottom: 14,
+    alignSelf: 'flex-start',
+  },
+  cardGrid: { gap: 10, marginBottom: 32, width: '100%' },
+  cardRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   ctaBtn: {
     width: '100%',
     backgroundColor: Colors.teal,
