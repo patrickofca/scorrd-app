@@ -93,7 +93,7 @@ types/           index.ts
 - ImageUpload — photo upload + camera roll. Used on analyze AND generate.
 - ListingPriceSelector — horizontal scroll pill selector. 6 pills: Any price(null) / Under $300k / $300k–$600k / $600k–$900k / $900k–$1.5M / $1.5M+. Single select. ALWAYS pills — NEVER a slider.
 - BuyerTypeSelector — multi-select pills: First-Time Buyer / Move-Up Buyer / Luxury Buyer / Investor / Downsizer / Relocating
-- ScoreRing — circular SVG, accepts score + color
+- ScoreRing — circular SVG, accepts `score`, `size` (default 140), `strokeWidth` (default 12). Color is derived internally via `scoreColor(score)` — no color prop.
 - InfoCallout — teal left border, 10px uppercase teal label, 13px body, off-white bg
 - SkeletonLoader — animated skeleton for all async content
 
@@ -102,17 +102,21 @@ types/           index.ts
 ### Onboarding (app/onboarding.tsx)
 - Shows ONCE on first login/registration — never again
 - Persisted via SecureStore key `scorrd.onboarding.v1.seen`
-- Existing users (app already hydrated with token): flag set silently in AuthGate, never see this screen
-- Content: Scorrd logo, "AI that grades your posts." headline, subhead, static score card mock (composite 8.4 + 4 dimensions), CTA + skip link
-- CTA "Score my first post →": sets flag + pre-fills analyze textarea with sample realtor post via preFillStore, navigates to Score tab
-- Skip: sets flag, navigates to Score tab empty
-- AuthGate in _layout.tsx handles routing: fresh login with no expiredPath/returnPath + unseen flag → /onboarding; existing users → set flag silently
+- Content: Scorrd logo (72px), "AI that grades your posts." headline, subhead, real `ScoreRing` (score=8.4, size=160, strokeWidth=14) + COMPOSITE SCORE / INSTAGRAM · NEW LISTING labels, 2×2 `ScoreCard` grid with static scores (Virality 9.1 / Follower Attraction 8.2 / Lead Capture 7.8 / Trust 8.6), CTA button, Skip link
+- CTA "Score my first post →": sets flag + pre-fills Score tab textarea with sample realtor post via `preFillStore.set()`, navigates to `/(tabs)/analyze`
+- Skip: sets flag, navigates to `/(tabs)/analyze` empty
+- **AuthGate trigger logic** (`_layout.tsx`):
+  - Dedicated `useEffect([hydrated])` fires once on hydration: if token exists at that moment = existing user → sets flag silently (they never see onboarding)
+  - Routing `useEffect`: `accessToken && inAuthGroup` (fresh login/register) → async SecureStore check → if flag unset + no expiredPath/returnPath → `router.replace('/onboarding')`
+  - Session-expired users (have expiredPath) always skip onboarding and restore their destination
+- **Testing**: SecureStore persists across reinstalls on iOS. To force-show onboarding, call `SecureStore.deleteItemAsync('scorrd.onboarding.v1.seen')` in login's success block temporarily
 
 ### Navigation
 - 5-tab layout: **Score** | Generate | Trends | Calendar | Settings (Score is first, tab route is still `analyze`)
 - Tab label "Score", icon `speedometer-outline`. Route path unchanged (`/(tabs)/analyze`) — no deep link breakage.
-- Dashboard routable via router.push only (href: null in tab layout)
-- AuthGate, TokenGuard, PushSetup, NotificationBanner, Analytics, ScreenTracker all in _layout.tsx
+- Leads and Dashboard are NOT in the tab bar (`href: null`) — routable via `router.push` only
+- AuthGate, TokenGuard, PushSetup, NotificationBanner, Analytics, ScreenTracker all in `_layout.tsx`
+- **Auth screens**: both login.tsx and register.tsx show Scorrd logo (140px, borderRadius 28, drop shadow). Register has confirm password field with match validation.
 
 ### Score Tab / Analyze Screen (analyze.tsx)
 - Permanent header: "Paste a post. Get graded in 13 seconds." (teal, DM Serif Display) / "Score across 4 dimensions. Know exactly what to fix." (secondary)
@@ -120,6 +124,13 @@ types/           index.ts
 - Single: platform selector, content type, textarea with char counter, ImageUpload, listing context
 - Carousel: 2-column grid, max 10 slides, Hook/CTA labels, min 2 to analyze
 - Both modes: ListingPriceSelector + BuyerTypeSelector optional context
+
+### Trends Tab (trends.tsx)
+- Platform pills: Instagram | Facebook | LinkedIn | **X** (label "X", key `twitter`) | TikTok
+- Per-platform: platform insight callout, trending formats, hot topics, hashtag strategy (broad/mid/niche), what to avoid, "Create content around these trends" CTA → Generate tab
+- Skeleton loader (3 sections) while loading; error state with retry
+- Refresh button: `POST /trends/:platform/refresh` — also called on initial load for `twitter` platform (workaround for bad cached data returning LinkedIn content; revert to GET when backend cache bug is fixed)
+- `api.trends.get(platform)` — GET, `api.trends.refresh(platform)` — POST
 
 ### Generate Tab (generate.tsx)
 - Mode toggle: Post | Reel
@@ -155,9 +166,11 @@ types/           index.ts
 - LeadCard, LeadDetailSheet, AddLeadModal, PipelineColumn
 
 ### Settings Tab (settings.tsx)
-- ProfileSection, capture page headline, SubscriptionSection (usage bars, Stripe portal)
-- NotificationsSection, danger zone delete
+- Fetches fresh user data via `api.me.get()` on every mount — subscription/plan always current
+- ProfileSection, capture page headline, SubscriptionSection (usage bars, Stripe portal), NotificationsSection, Lead Pipeline preview (top 3), danger zone delete
 - billing/plans.tsx: agent/pro/broker cards — Agency NOT YET ADDED
+- billing/success.tsx: waits 2s for Stripe webhook, calls `GET /me`, updates store, navigates to Generate
+- billing/cancel.tsx: redirects to `/billing/plans`
 
 ### Services
 - api.ts: auth, me, billing, analyses, carousel, generate (all endpoints), stats, leads, calendar
