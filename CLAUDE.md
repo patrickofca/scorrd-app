@@ -147,6 +147,7 @@ types/           index.ts
 - AudienceMatchCard (5th card): verdict, mismatch banner below 5.0, InfoCallout WHY THIS MATTERS
 - PlatformFitSection: 5 platform cards, Native badge, expandable what_to_change
 - What to Fix (top 3), Optimized Rewrites tabbed by platform with copy
+- **Share Score button**: teal-outlined pill below composite ring. Taps → `api.analyses.shareCard(id)` (POST /analyses/:id/share-card, returns `{ url, format }`) → `Share.share()` with pre-filled text "I scored X.X on Scorrd…". `sharing` state disables button + shows "Generating…" while waiting.
 - Lead Magnet Idea, Hashtag Strategy, Best Times to Post
 - 30-Day Calendar button: broker-gated, navigates to month-calendar.tsx
 
@@ -178,17 +179,6 @@ types/           index.ts
 - 402 interceptor: plan_upgrade_required → alert + /billing/plans
 
 ## What Is NOT Built Yet (Frontend)
-- **Shareable Score Card** — BLOCKED on backend `POST /analyses/:id/share-card`
-  - Button: "Share Score" below composite ring on `app/analysis/[id].tsx`
-  - Flow: tap → call endpoint → get image URL → `Share.share()` with pre-filled text "I scored [X.X] on Scorrd — the AI that grades realtor posts. Try it: scorrd.app"
-  - Add `api.analyses.shareCard(id)` to `services/api.ts`
-  - Backend returns single image URL; user picks destination (Stories vs feed) after share sheet opens
-  - **Visual hierarchy spec for Sharp template (scorrd-api):**
-    - Lead Capture score = hero number (2× font size of other dimensions), teal accent
-    - Below Lead Capture: contextual line — "meaning it'll actually generate DMs" if score ≥ 7.0, "this post needs work to generate leads" if score < 7.0
-    - Lead Capture label → "Lead Capture Score" with subtitle "The metric that pays." (small, teal)
-    - Composite score → demoted to top-right corner or secondary label "Overall: X.X"
-    - Other 3 dimensions (Virality, Follower Attraction, Trust & Authority) — equal weight to each other, subordinate to Lead Capture
 - Agency tier on billing/plans.tsx — 4th plan card needed
 - Agent Settings section (Phase 6 — enable/disable agent, config)
 - app/agent/chat.tsx — Saturday intake chat screen

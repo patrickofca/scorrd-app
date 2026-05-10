@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Share,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ export default function AnalysisResultScreen() {
   const [rewriteTab, setRewriteTab] =
     useState<(typeof REWRITE_TABS)[number]["key"]>("rewriteInstagram");
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const {
     data: analysis,
@@ -69,6 +71,23 @@ export default function AnalysisResultScreen() {
       best_platform_fit: best,
     });
   }, [analysis?.id]);
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const { url } = await api.analyses.shareCard(id);
+      await Share.share({
+        message: `I scored ${analysis?.compositeScore.toFixed(1)} on Scorrd — the AI that grades realtor posts. Try it: scorrd.app`,
+        url,
+      });
+    } catch (err) {
+      if (err instanceof AuthExpiredError) return;
+      Alert.alert('Could not generate share card', 'Please try again.');
+    } finally {
+      setSharing(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -140,6 +159,19 @@ export default function AnalysisResultScreen() {
             {analysis.post?.contentType?.replace(/_/g, " ")}
           </Text>
         </View>
+
+        {/* Share Score */}
+        <TouchableOpacity
+          style={[styles.shareBtn, sharing && styles.shareBtnDisabled]}
+          onPress={handleShare}
+          disabled={sharing}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="share-outline" size={18} color={sharing ? Colors.textSecondary : Colors.teal} />
+          <Text style={[styles.shareBtnText, sharing && styles.shareBtnTextDisabled]}>
+            {sharing ? 'Generating…' : 'Share Score'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Why can't I score a 10? */}
         <TouchableOpacity
@@ -754,6 +786,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: FontFamily.sansSemibold,
     color: Colors.surface,
+  },
+
+  // Share Score button
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.teal,
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    alignSelf: "center",
+  },
+  shareBtnDisabled: {
+    borderColor: Colors.border,
+  },
+  shareBtnText: {
+    fontSize: FontSize.sm,
+    fontFamily: FontFamily.sansSemibold,
+    color: Colors.teal,
+  },
+  shareBtnTextDisabled: {
+    color: Colors.textSecondary,
   },
 
   // Post times
