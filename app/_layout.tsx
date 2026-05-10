@@ -59,6 +59,18 @@ function AuthGate() {
   // Track whether the user has ever had a live token this session,
   // so we only save a return path on expiry (not on cold start with no token).
   const hadTokenRef = useRef(false);
+  const existingUserMarked = useRef(false);
+
+  // Fires exactly once after hydration. If a token was already in SecureStore
+  // at that moment the user is pre-existing — mark onboarding as seen so they
+  // never see it. New users have no token here, so the flag stays unset.
+  useEffect(() => {
+    if (!hydrated || existingUserMarked.current) return;
+    existingUserMarked.current = true;
+    if (useAuthStore.getState().accessToken) {
+      SecureStore.setItemAsync("scorrd.onboarding.v1.seen", "true").catch(() => {});
+    }
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -86,8 +98,6 @@ function AuthGate() {
       })();
     } else if (accessToken) {
       hadTokenRef.current = true;
-      // Silently mark onboarding as seen for existing logged-in users
-      SecureStore.setItemAsync("scorrd.onboarding.v1.seen", "true").catch(() => {});
     }
   }, [accessToken, hydrated, segments]);
 
