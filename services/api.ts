@@ -28,6 +28,8 @@ import type {
   GenerateMonthResponse,
   TrendsData,
   CarouselAnalysis,
+  AnalysisScoresEvent,
+  AnalysisRewritesEvent,
 } from '../types';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -174,6 +176,109 @@ export const api = {
 
     delete: (id: string) =>
       request<void>(`/analyses/${id}`, { method: 'DELETE' }),
+
+    shareCard: (id: string, format: 'story' | 'feed' = 'feed') =>
+      request<{ url: string; format: string }>(`/analyses/${id}/share-card`, {
+        method: 'POST',
+        body: JSON.stringify({ format }),
+      }),
+
+    stream: (
+      data: {
+        platform: string;
+        content_type: string;
+        draft_text: string;
+        image_base64?: string;
+        image_media_type?: string;
+        listing_price_range?: string;
+        target_buyer_type?: string[];
+        agent_name?: string;
+        brokerage_name?: string;
+      },
+      callbacks: {
+        onScores: (event: AnalysisScoresEvent) => void;
+        onRewrites: (event: AnalysisRewritesEvent) => void;
+        onComplete: (event: { analysisId: string; postId: string }) => void;
+        onError: (message: string) => void;
+      },
+    ): () => void => {
+      const { accessToken } = useAuthStore.getState();
+      const xhr = new XMLHttpRequest();
+      let processed = 0;
+      let sseBuffer = '';
+
+      xhr.open('POST', `${API_URL}/analyses/stream`);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      if (accessToken) xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+
+      xhr.onprogress = () => {
+        sseBuffer += xhr.responseText.slice(processed);
+        processed = xhr.responseText.length;
+        const parts = sseBuffer.split('\n\n');
+        sseBuffer = parts.pop() ?? '';
+        for (const block of parts) {
+          const line = block.trim();
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6)) as { type: string } & Record<string, unknown>;
+            switch (event.type) {
+              case 'scores':
+                callbacks.onScores(event as unknown as AnalysisScoresEvent);
+                break;
+              case 'rewrites':
+                callbacks.onRewrites(event as unknown as AnalysisRewritesEvent);
+                break;
+              case 'complete':
+                callbacks.onComplete(event as { type: string; analysisId: string; postId: string });
+                break;
+              case 'error':
+                callbacks.onError((event.message as string) ?? 'Analysis failed');
+                break;
+            }
+          } catch { /* ignore malformed chunks */ }
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 401) {
+          useAuthStore.getState().expireSession();
+          callbacks.onError('Session expired');
+        } else if (xhr.status === 402) {
+          try {
+            const json = JSON.parse(xhr.responseText) as { error?: string; required_plan?: string };
+            const errorCode = json.error;
+            if (errorCode === 'plan_upgrade_required') {
+              const requiredPlan = json.required_plan ?? 'Pro';
+              const currentPlan = useAuthStore.getState().user?.plan ?? 'none';
+              posthog.capture('upgrade_prompt_shown', { feature: requiredPlan, current_plan: currentPlan });
+              Alert.alert('Upgrade Required', `This feature requires the ${requiredPlan} plan. Upgrade now?`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Upgrade', onPress: () => {
+                  posthog.capture('upgrade_prompt_tapped', { feature: requiredPlan, current_plan: currentPlan });
+                  router.push('/billing/plans');
+                }},
+              ]);
+            } else if (errorCode === 'subscription_required') {
+              const currentPlan = useAuthStore.getState().user?.plan ?? 'none';
+              posthog.capture('upgrade_prompt_shown', { feature: 'subscription', current_plan: currentPlan });
+              Alert.alert('Subscription Required', 'Start your free 14-day trial to use Scorrd.', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Start Trial', onPress: () => {
+                  posthog.capture('upgrade_prompt_tapped', { feature: 'subscription', current_plan: currentPlan });
+                  router.push('/billing/plans');
+                }},
+              ]);
+            }
+          } catch { /* ignore */ }
+          callbacks.onError('payment_required');
+        }
+      };
+
+      xhr.onerror = () => callbacks.onError('Network error. Please try again.');
+
+      xhr.send(JSON.stringify(data));
+      return () => xhr.abort();
+    },
   },
 
   generate: {

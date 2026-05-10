@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -37,6 +37,7 @@ import { BuyerTypeSelector } from "../../components/BuyerTypeSelector";
 import { useAuthStore } from "../../store/authStore";
 import { usePreFillStore } from "../../store/preFillStore";
 import { useFormDraftStore } from "../../store/formDraftStore";
+import { useStreamingAnalysisStore } from "../../store/streamingAnalysisStore";
 import { AuthExpiredError } from "../../services/api";
 import type { Analysis } from "../../types";
 
@@ -66,6 +67,7 @@ export default function AnalyzeScreen() {
   const [loadingRecent, setLoadingRecent] = useState(false);
   const [mode, setMode] = useState<'single' | 'carousel'>('single');
   const [slides, setSlides] = useState<{ uri: string; base64: string; mediaType: string }[]>([]);
+  const abortRef = useRef<(() => void) | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -198,6 +200,7 @@ export default function AnalyzeScreen() {
       return;
     }
 
+    abortRef.current?.();
     setLoading(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     posthog.capture("analysis_submitted", {
@@ -207,49 +210,88 @@ export default function AnalyzeScreen() {
       has_audience_context: !!priceRange && buyerTypes.size > 0,
     });
 
-    try {
-      const result = await api.analyses.submit({
+    useStreamingAnalysisStore.getState().reset();
+    useStreamingAnalysisStore.getState().set({
+      phase: 'scoring',
+      platform,
+      contentType,
+      listingPriceRange: priceRange ?? null,
+      targetBuyerType: Array.from(buyerTypes),
+    });
+
+    abortRef.current = api.analyses.stream(
+      {
         platform,
         content_type: contentType,
         draft_text: text.trim(),
-        ...(image
-          ? { image_base64: image.base64, image_media_type: image.type }
-          : {}),
+        ...(image ? { image_base64: image.base64, image_media_type: image.type } : {}),
         ...(priceRange ? { listing_price_range: priceRange } : {}),
-        ...(buyerTypes.size > 0
-          ? { target_buyer_type: Array.from(buyerTypes) }
-          : {}),
+        ...(buyerTypes.size > 0 ? { target_buyer_type: Array.from(buyerTypes) } : {}),
         ...(user?.name ? { agent_name: user.name } : {}),
         ...(user?.brokerageName ? { brokerage_name: user.brokerageName } : {}),
-      });
-
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.push(`/analysis/${result.analysis.id}`);
-      setText("");
-      setImage(null);
-    } catch (err) {
-      if (err instanceof AuthExpiredError) {
-        useFormDraftStore.getState().saveAnalyze(
-          {
-            platform,
-            contentType,
-            text,
-            priceRange,
-            buyerTypes: Array.from(buyerTypes),
-          },
-          "/(tabs)/analyze",
-        );
-        await useAuthStore.getState().expireSession();
-        return;
-      }
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "Analysis failed",
-        err instanceof Error ? err.message : "Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
+      },
+      {
+        onScores: (event) => {
+          useStreamingAnalysisStore.getState().set({
+            phase: 'rewriting',
+            compositeScore: event.compositeScore,
+            viralityScore: event.viralityScore,
+            followerScore: event.followerScore,
+            leadCaptureScore: event.leadCaptureScore,
+            trustScore: event.trustScore,
+            scoreBreakdown: {
+              virality: event.viralityBreakdown,
+              follower: event.followerBreakdown,
+              lead_capture: event.leadCaptureBreakdown,
+              trust: event.trustBreakdown,
+            },
+            audienceMatchScore: event.audienceMatchScore,
+            audienceMatchVerdict: event.audienceMatchVerdict,
+            audienceMatchBreakdown: event.audienceMatchBreakdown,
+            recommendations: event.recommendations ?? [],
+            contentPattern: event.contentPattern,
+            leadMagnetSuggestion: event.leadMagnetSuggestion,
+            optimalPostTimes: event.optimalPostTimes,
+            hashtagRecommendations: event.hashtagRecommendations,
+            platformFit: event.platformFit,
+          });
+          setLoading(false);
+          setText('');
+          setImage(null);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.push('/analysis/pending' as any);
+        },
+        onRewrites: (event) => {
+          useStreamingAnalysisStore.getState().set({
+            rewriteInstagram: event.rewriteInstagram,
+            rewriteFacebook: event.rewriteFacebook,
+            rewriteLinkedin: event.rewriteLinkedin,
+            rewriteTwitter: event.rewriteTwitter,
+            rewriteTiktok: event.rewriteTiktok,
+          });
+        },
+        onComplete: (event) => {
+          useStreamingAnalysisStore.getState().set({
+            phase: 'complete',
+            analysisId: event.analysisId,
+            postId: event.postId,
+          });
+        },
+        onError: (message) => {
+          setLoading(false);
+          if (message === 'Session expired') {
+            useFormDraftStore.getState().saveAnalyze(
+              { platform, contentType, text, priceRange, buyerTypes: Array.from(buyerTypes) },
+              '/(tabs)/analyze',
+            );
+            return;
+          }
+          if (message === 'payment_required') return;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          Alert.alert('Analysis failed', message || 'Please try again.');
+        },
+      },
+    );
   }
 
   return (
@@ -471,7 +513,9 @@ export default function AnalyzeScreen() {
           {loading ? (
             <View style={styles.analyzeButtonInner}>
               <ActivityIndicator color={Colors.surface} size="small" />
-              <Text style={styles.analyzeButtonText}>Analyzing...</Text>
+              <Text style={styles.analyzeButtonText}>
+                {mode === 'carousel' ? 'Analyzing...' : 'Scoring your post...'}
+              </Text>
             </View>
           ) : (
             <Text style={styles.analyzeButtonText}>

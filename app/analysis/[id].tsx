@@ -10,7 +10,7 @@ import {
   Share,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -25,6 +25,51 @@ import { ScoreRing } from "../../components/ScoreRing";
 import { ScoreCard } from "../../components/ScoreCard";
 import { AudienceMatchCard } from "../../components/AudienceMatchCard";
 import { PlatformFitSection } from "../../components/PlatformFitSection";
+import { useStreamingAnalysisStore, type StreamingState } from "../../store/streamingAnalysisStore";
+import type { Analysis } from "../../types";
+
+function buildAnalysisFromStream(s: StreamingState): Analysis {
+  return {
+    id: s.analysisId ?? '',
+    postId: s.postId ?? '',
+    compositeScore: s.compositeScore ?? 0,
+    viralityScore: s.viralityScore ?? 0,
+    followerScore: s.followerScore ?? 0,
+    leadCaptureScore: s.leadCaptureScore ?? 0,
+    trustScore: s.trustScore ?? 0,
+    scoreBreakdown: s.scoreBreakdown!,
+    rewriteInstagram: s.rewriteInstagram,
+    rewriteFacebook: s.rewriteFacebook,
+    rewriteLinkedin: s.rewriteLinkedin,
+    rewriteTwitter: s.rewriteTwitter,
+    rewriteTiktok: s.rewriteTiktok,
+    recommendations: s.recommendations,
+    contentPattern: s.contentPattern,
+    leadMagnetSuggestion: s.leadMagnetSuggestion,
+    optimalPostTimes: s.optimalPostTimes,
+    hashtagRecommendations: s.hashtagRecommendations,
+    listingPriceRange: s.listingPriceRange,
+    targetBuyerType: s.targetBuyerType,
+    audienceMatchScore: s.audienceMatchScore,
+    audienceMatchVerdict: s.audienceMatchVerdict,
+    audienceMatchBreakdown: s.audienceMatchBreakdown,
+    platformFit: s.platformFit,
+    claudeModelVersion: '',
+    tokensUsed: null,
+    createdAt: new Date().toISOString(),
+    post: {
+      id: s.postId ?? '',
+      userId: '',
+      orgId: '',
+      contentType: s.contentType ?? '',
+      platform: s.platform ?? '',
+      draftText: null,
+      imageUrl: null,
+      status: 'analyzing',
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
 
 const REWRITE_TABS = [
   { key: "rewriteInstagram", label: "Instagram" },
@@ -38,19 +83,24 @@ export default function AnalysisResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const queryClient = useQueryClient();
+  const streamingStore = useStreamingAnalysisStore();
+  const isPending = id === 'pending';
+  const realId = isPending ? (streamingStore.analysisId ?? '') : id;
+
   const [rewriteTab, setRewriteTab] =
     useState<(typeof REWRITE_TABS)[number]["key"]>("rewriteInstagram");
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   const {
-    data: analysis,
+    data: queryData,
     isLoading,
     error,
   } = useQuery({
     queryKey: ["analysis", id],
     queryFn: () => api.analyses.get(id),
-    enabled: !!id,
+    enabled: !!id && !isPending,
   });
 
   useEffect(() => {
@@ -61,24 +111,45 @@ export default function AnalysisResultScreen() {
   }, [error]);
 
   useEffect(() => {
-    if (!analysis) return;
-    const best = analysis.platformFit?.length
-      ? [...analysis.platformFit].sort((a, b) => b.fit_score - a.fit_score)[0].platform
+    if (isPending || !queryData) return;
+    const best = queryData.platformFit?.length
+      ? [...queryData.platformFit].sort((a, b) => b.fit_score - a.fit_score)[0].platform
       : null;
     posthog.capture('analysis_completed', {
-      composite_score: analysis.compositeScore,
-      has_audience_match: analysis.audienceMatchScore != null,
+      composite_score: queryData.compositeScore,
+      has_audience_match: queryData.audienceMatchScore != null,
       best_platform_fit: best,
     });
-  }, [analysis?.id]);
+  }, [queryData?.id]);
+
+  // When the complete event fires: fire PostHog, pre-populate React Query cache,
+  // then replace the route to the real analysis ID (no re-fetch flash).
+  useEffect(() => {
+    if (!isPending || !streamingStore.analysisId) return;
+    const best = streamingStore.platformFit?.length
+      ? [...streamingStore.platformFit].sort((a, b) => b.fit_score - a.fit_score)[0].platform
+      : null;
+    posthog.capture('analysis_completed', {
+      composite_score: streamingStore.compositeScore ?? 0,
+      has_audience_match: streamingStore.audienceMatchScore != null,
+      best_platform_fit: best,
+    });
+    const full = buildAnalysisFromStream(streamingStore);
+    queryClient.setQueryData(['analysis', streamingStore.analysisId], full);
+    router.replace(`/analysis/${streamingStore.analysisId}` as any);
+  }, [streamingStore.analysisId]);
 
   async function handleShare() {
+    if (!realId) return;
     setSharing(true);
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const { url } = await api.analyses.shareCard(id);
+      const { url } = await api.analyses.shareCard(realId);
+      const score = isPending
+        ? (streamingStore.compositeScore ?? 0).toFixed(1)
+        : analysis?.compositeScore.toFixed(1);
       await Share.share({
-        message: `I scored ${analysis?.compositeScore.toFixed(1)} on Scorrd — the AI that grades realtor posts. Try it: scorrd.app`,
+        message: `I scored ${score} on Scorrd — the AI that grades realtor posts. Try it: scorrd.app`,
         url,
       });
     } catch (err) {
@@ -89,29 +160,33 @@ export default function AnalysisResultScreen() {
     }
   }
 
-  if (isLoading) {
+  if ((!isPending && isLoading) || (isPending && !streamingStore.compositeScore)) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.teal} />
-          <Text style={styles.loadingText}>Loading your score...</Text>
+          <Text style={styles.loadingText}>
+            {isPending ? 'Scoring your post...' : 'Loading your score...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (error instanceof AuthExpiredError) {
+  if (!isPending && error instanceof AuthExpiredError) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.teal} />
-          <Text style={styles.loadingText}>Session expired — redirecting to sign in...</Text>
+          <Text style={styles.loadingText}>
+            Session expired — redirecting to sign in...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (error || !analysis) {
+  if (!isPending && (error || !queryData)) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <View style={styles.loadingContainer}>
@@ -124,8 +199,10 @@ export default function AnalysisResultScreen() {
     );
   }
 
+  const analysis: Analysis = isPending ? buildAnalysisFromStream(streamingStore) : queryData!;
   const breakdown = analysis.scoreBreakdown;
   const color = scoreColor(analysis.compositeScore);
+  const rewritesLoading = isPending && streamingStore.rewriteInstagram === null;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -160,16 +237,25 @@ export default function AnalysisResultScreen() {
           </Text>
         </View>
 
-        {/* Share Score */}
+        {/* Share Score — disabled until DB write confirms (pending + no analysisId) */}
         <TouchableOpacity
-          style={[styles.shareBtn, sharing && styles.shareBtnDisabled]}
+          style={[styles.shareBtn, (sharing || !realId) && styles.shareBtnDisabled]}
           onPress={handleShare}
-          disabled={sharing}
+          disabled={sharing || !realId}
           activeOpacity={0.85}
         >
-          <Ionicons name="share-outline" size={18} color={sharing ? Colors.textSecondary : Colors.teal} />
-          <Text style={[styles.shareBtnText, sharing && styles.shareBtnTextDisabled]}>
-            {sharing ? 'Generating…' : 'Share Score'}
+          <Ionicons
+            name="share-outline"
+            size={18}
+            color={sharing ? Colors.textSecondary : Colors.teal}
+          />
+          <Text
+            style={[
+              styles.shareBtnText,
+              sharing && styles.shareBtnTextDisabled,
+            ]}
+          >
+            {sharing ? "Generating…" : "Share Score"}
           </Text>
         </TouchableOpacity>
 
@@ -279,7 +365,8 @@ export default function AnalysisResultScreen() {
           analysis.audienceMatchScore < 5.0 && (
             <View style={styles.mismatchBanner}>
               <Text style={styles.mismatchText}>
-                ⚠ Mismatch detected — this post may attract the wrong buyer for this listing.
+                ⚠ Mismatch detected — this post may attract the wrong buyer for
+                this listing.
               </Text>
             </View>
           )}
@@ -372,21 +459,36 @@ export default function AnalysisResultScreen() {
             })}
           </ScrollView>
 
-          {/* Rewrite content */}
-          {analysis[rewriteTab] ? (
+          {/* Rewrite content or skeleton while Phase 2 streams */}
+          {rewritesLoading ? (
+            <View style={styles.rewritesSkeleton}>
+              <View style={styles.skeletonLine} />
+              <View style={[styles.skeletonLine, styles.skeletonLineMid]} />
+              <View style={styles.skeletonLine} />
+              <View style={[styles.skeletonLine, styles.skeletonLineShort]} />
+              <View style={styles.skeletonLine} />
+              <View style={[styles.skeletonLine, styles.skeletonLineMid]} />
+            </View>
+          ) : analysis[rewriteTab] ? (
             <View style={styles.rewriteBox}>
               <Text style={styles.rewriteText}>{analysis[rewriteTab]}</Text>
               <View style={styles.copyActions}>
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={async () => {
-                    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    await Clipboard.setStringAsync(analysis[rewriteTab] as string);
+                    await Haptics.impactAsync(
+                      Haptics.ImpactFeedbackStyle.Light,
+                    );
+                    await Clipboard.setStringAsync(
+                      analysis[rewriteTab] as string,
+                    );
                     Alert.alert("Copied!", "Rewrite copied to clipboard.");
                   }}
                 >
                   <Ionicons name="copy-outline" size={15} color={Colors.teal} />
-                  <Text style={styles.actionButtonText} numberOfLines={1}>Copy</Text>
+                  <Text style={styles.actionButtonText} numberOfLines={1}>
+                    Copy
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -458,31 +560,46 @@ export default function AnalysisResultScreen() {
           activeOpacity={0.85}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            if (user?.plan !== 'brokerage') {
+            if (user?.plan !== "brokerage") {
               Alert.alert(
-                'Brokerage Plan Required',
-                'The 30-Day Content Calendar is available on the Brokerage plan ($149/mo). Upgrade to generate a full month of AI-curated posts.',
+                "Brokerage Plan Required",
+                "The 30-Day Content Calendar is available on the Brokerage plan ($149/mo). Upgrade to generate a full month of AI-curated posts.",
                 [
-                  { text: 'Not now', style: 'cancel' },
-                  { text: 'View Plans', onPress: () => router.push('/billing/plans') },
+                  { text: "Not now", style: "cancel" },
+                  {
+                    text: "View Plans",
+                    onPress: () => router.push("/billing/plans"),
+                  },
                 ],
               );
               return;
             }
-            router.push({ pathname: '/analysis/month-calendar', params: { analysisId: id } });
+            router.push({
+              pathname: "/analysis/month-calendar",
+              params: { analysisId: realId },
+            });
           }}
         >
           <Ionicons name="calendar-outline" size={20} color={Colors.surface} />
           <View style={styles.calendarButtonText}>
-            <Text style={styles.calendarButtonTitle}>30-Day Content Calendar</Text>
-            <Text style={styles.calendarButtonSub}>AI-curated posts for the next month</Text>
+            <Text style={styles.calendarButtonTitle}>
+              30-Day Content Calendar
+            </Text>
+            <Text style={styles.calendarButtonSub}>
+              AI-curated posts for the next month
+            </Text>
           </View>
-          {user?.plan !== 'brokerage' && (
+          {user?.plan !== "brokerage" && (
             <View style={styles.calendarBadge}>
               <Text style={styles.calendarBadgeText}>$149+</Text>
             </View>
           )}
-          <Ionicons name="chevron-forward" size={16} color={Colors.surface} style={{ opacity: 0.7 }} />
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={Colors.surface}
+            style={{ opacity: 0.7 }}
+          />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -492,10 +609,10 @@ export default function AnalysisResultScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.offWhite },
   mismatchBanner: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: "#FEE2E2",
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#DC2626',
+    borderLeftColor: "#DC2626",
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 10,
@@ -503,7 +620,7 @@ const styles = StyleSheet.create({
   mismatchText: {
     fontSize: 13,
     fontFamily: FontFamily.sans,
-    color: '#DC2626',
+    color: "#DC2626",
     lineHeight: 18,
   },
   header: {
@@ -615,7 +732,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardGrid: { gap: 10, marginBottom: 32 },
-  cardRow: { flexDirection: "row", gap: 10, alignItems: 'flex-start' },
+  cardRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
 
   // What to fix
   section: { marginBottom: 32 },
@@ -759,8 +876,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.navy,
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 8,
   },
@@ -774,7 +891,7 @@ const styles = StyleSheet.create({
   calendarButtonSub: {
     fontSize: FontSize.xs,
     fontFamily: FontFamily.sans,
-    color: 'rgba(255,255,255,0.65)',
+    color: "rgba(255,255,255,0.65)",
   },
   calendarBadge: {
     backgroundColor: Colors.teal,
@@ -787,6 +904,21 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.sansSemibold,
     color: Colors.surface,
   },
+
+  // Rewrites skeleton — shown while Phase 2 streams
+  rewritesSkeleton: {
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  skeletonLine: {
+    height: 13,
+    borderRadius: 4,
+    backgroundColor: Colors.border,
+    width: '100%',
+  },
+  skeletonLineMid: { width: '80%' },
+  skeletonLineShort: { width: '55%' },
 
   // Share Score button
   shareBtn: {

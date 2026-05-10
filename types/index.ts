@@ -271,6 +271,35 @@ export interface SlideScore {
   one_fix: string;
 }
 
+export interface AnalysisScoresEvent {
+  compositeScore: number;
+  viralityScore: number;
+  followerScore: number;
+  leadCaptureScore: number;
+  trustScore: number;
+  viralityBreakdown: Analysis['scoreBreakdown']['virality'];
+  followerBreakdown: Analysis['scoreBreakdown']['follower'];
+  leadCaptureBreakdown: Analysis['scoreBreakdown']['lead_capture'];
+  trustBreakdown: Analysis['scoreBreakdown']['trust'];
+  audienceMatchScore: number | null;
+  audienceMatchVerdict: string | null;
+  audienceMatchBreakdown: Analysis['audienceMatchBreakdown'];
+  recommendations: string[];
+  contentPattern: string | null;
+  leadMagnetSuggestion: string | null;
+  optimalPostTimes: Analysis['optimalPostTimes'];
+  hashtagRecommendations: Analysis['hashtagRecommendations'];
+  platformFit: Analysis['platformFit'];
+}
+
+export interface AnalysisRewritesEvent {
+  rewriteInstagram: string | null;
+  rewriteFacebook: string | null;
+  rewriteLinkedin: string | null;
+  rewriteTwitter: string | null;
+  rewriteTiktok: string | null;
+}
+
 export interface CarouselAnalysis {
   id: string;
   slideCount: number;
