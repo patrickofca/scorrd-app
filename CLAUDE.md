@@ -240,6 +240,9 @@ git diff HEAD~1                 # diff against last commit
 git checkout -- path/to/file    # discard unstaged changes to a file
 ```
 
+## AI Behavior — ALWAYS follow
+- After every code change, provide the exact terminal commands the user needs to commit and push (e.g. `git add`, `git commit -m "..."`, `git push origin <branch>`). Do not assume the user will figure out the commands — always surface them explicitly.
+
 ## Conventions — ALWAYS follow
 - Never suggest Zustand alternatives or different navigation libraries
 - Never use inline styles — StyleSheet.create only
