@@ -32,20 +32,20 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
+        name="analyze"
+        options={{
+          title: "Score",
+          tabBarIcon: ({ color }) => (
+            <TabIcon name="speedometer-outline" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="generate"
         options={{
           title: "Generate",
           tabBarIcon: ({ color }) => (
             <TabIcon name="create-outline" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="analyze"
-        options={{
-          title: "Analyze",
-          tabBarIcon: ({ color }) => (
-            <TabIcon name="analytics-outline" color={color} />
           ),
         }}
       />

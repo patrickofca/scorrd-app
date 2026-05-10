@@ -262,13 +262,8 @@ export default function AnalyzeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.heading}>Analyze Post</Text>
-        <Text style={styles.subheading}>
-          Paste a social media post that you want to analyze to get an instant
-          score and feedback. The post can be from your own account or from a
-          competitor's account. NOTE: To Generate a new post, tap "Generate" in
-          the bottom navigation.
-        </Text>
+        <Text style={styles.heading}>Paste a post. Get graded in 13 seconds.</Text>
+        <Text style={styles.subheading}>Score across 4 dimensions. Know exactly what to fix.</Text>
 
         {/* Mode toggle */}
         <View style={styles.modeToggle}>
@@ -560,7 +555,7 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: FontSize["2xl"],
     fontFamily: FontFamily.serif,
-    color: Colors.navy,
+    color: Colors.teal,
     marginBottom: 4,
   },
   subheading: {

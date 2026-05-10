@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import * as SecureStore from "expo-secure-store";
 import { posthog } from "../services/analytics";
 import { PostHogProvider } from "posthog-react-native";
 import {
@@ -73,9 +74,20 @@ function AuthGate() {
       const { expiredPath } = useAuthStore.getState();
       const { returnPath } = useFormDraftStore.getState();
       useAuthStore.getState().setExpiredPath(null);
-      router.replace((expiredPath ?? returnPath ?? "/(tabs)/generate") as any);
+      (async () => {
+        if (!expiredPath && !returnPath) {
+          const seen = await SecureStore.getItemAsync("scorrd.onboarding.v1.seen");
+          if (!seen) {
+            router.replace("/onboarding" as any);
+            return;
+          }
+        }
+        router.replace((expiredPath ?? returnPath ?? "/(tabs)/generate") as any);
+      })();
     } else if (accessToken) {
       hadTokenRef.current = true;
+      // Silently mark onboarding as seen for existing logged-in users
+      SecureStore.setItemAsync("scorrd.onboarding.v1.seen", "true").catch(() => {});
     }
   }, [accessToken, hydrated, segments]);
 
