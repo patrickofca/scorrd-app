@@ -154,7 +154,8 @@ export default function AnalysisResultScreen() {
       });
     } catch (err) {
       if (err instanceof AuthExpiredError) return;
-      Alert.alert('Could not generate share card', 'Please try again.');
+      const msg = err instanceof Error ? err.message : 'Please try again.';
+      Alert.alert('Could not generate share card', msg);
     } finally {
       setSharing(false);
     }
@@ -258,6 +259,14 @@ export default function AnalysisResultScreen() {
             {sharing ? "Generating…" : "Share Score"}
           </Text>
         </TouchableOpacity>
+        {isPending && !realId && (
+          <View style={styles.shareFinalizingRow}>
+            <ActivityIndicator size="small" color={Colors.textSecondary} />
+            <Text style={styles.shareFinalizingText}>
+              Finalizing your score — share unlocks in a moment
+            </Text>
+          </View>
+        )}
 
         {/* Why can't I score a 10? */}
         <TouchableOpacity
@@ -943,6 +952,19 @@ const styles = StyleSheet.create({
     color: Colors.teal,
   },
   shareBtnTextDisabled: {
+    color: Colors.textSecondary,
+  },
+  shareFinalizingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: -12,
+    marginBottom: 20,
+  },
+  shareFinalizingText: {
+    fontSize: FontSize.xs,
+    fontFamily: FontFamily.sans,
     color: Colors.textSecondary,
   },
 
