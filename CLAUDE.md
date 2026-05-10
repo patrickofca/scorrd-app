@@ -193,6 +193,53 @@ types/           index.ts
 - Conditional rewrite display (score >= 7.5 → preservation note)
 - Video analyzer (Phase 5)
 
+## Git & GitHub Commands
+
+### Daily workflow
+```bash
+git status                                  # check what changed
+git diff                                    # see unstaged changes
+git add path/to/file.tsx                    # stage specific file (never git add -A)
+git commit -m "type: short description"     # commit
+git push origin <branch>                    # push branch
+```
+
+### Branch management
+```bash
+git checkout main                           # switch to main
+git pull origin main                        # pull latest main
+git checkout -b feat/your-feature-name      # new branch from current
+git push -u origin feat/your-feature-name  # push + track new branch
+git branch --show-current                   # see what branch you're on
+```
+
+### Merging feature branch into main
+```bash
+git checkout main
+git pull origin main
+git merge feat/your-feature-name
+git push origin main
+```
+
+### EAS Build & Submit (TestFlight)
+```bash
+eas build --platform ios --profile preview --clear-cache   # clean build
+eas submit --platform ios --latest --profile preview        # submit to TestFlight
+```
+
+### Local dev
+```bash
+npx expo start --clear          # start Metro (clears cache)
+ipconfig getifaddr en0          # get Mac LAN IP if phone can't connect
+```
+
+### Undo / recover
+```bash
+git log --oneline -10           # see recent commits
+git diff HEAD~1                 # diff against last commit
+git checkout -- path/to/file    # discard unstaged changes to a file
+```
+
 ## Conventions — ALWAYS follow
 - Never suggest Zustand alternatives or different navigation libraries
 - Never use inline styles — StyleSheet.create only
