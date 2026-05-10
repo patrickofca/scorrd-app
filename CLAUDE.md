@@ -178,6 +178,11 @@ types/           index.ts
 - 402 interceptor: plan_upgrade_required → alert + /billing/plans
 
 ## What Is NOT Built Yet (Frontend)
+- **Shareable Score Card** — BLOCKED on backend `POST /analyses/:id/share-card`
+  - Button: "Share Score" below composite ring on `app/analysis/[id].tsx`
+  - Flow: tap → call endpoint → get image URL → `Share.share()` with pre-filled text "I scored [X.X] on Scorrd — the AI that grades realtor posts. Try it: scorrd.app"
+  - Add `api.analyses.shareCard(id)` to `services/api.ts`
+  - Backend returns single image URL; user picks destination (Stories vs feed) after share sheet opens
 - Agency tier on billing/plans.tsx — 4th plan card needed
 - Agent Settings section (Phase 6 — enable/disable agent, config)
 - app/agent/chat.tsx — Saturday intake chat screen
