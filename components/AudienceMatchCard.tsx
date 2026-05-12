@@ -2,13 +2,8 @@ import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ScoreRing } from "./ScoreRing";
-import { InfoCallout } from "./InfoCallout";
 import { Colors, scoreColor } from "../constants/colors";
 import { FontFamily, FontSize } from "../constants/typography";
-
-const WHY_IT_MATTERS =
-  "Misaligned content fills your inbox with unqualified leads. " +
-  "The fixes below target the buyer who can actually close.";
 
 interface AudienceMatchBreakdown {
   detected_audience_signals: string[];
@@ -64,31 +59,16 @@ export function AudienceMatchCard({ score, verdict, breakdown }: Props) {
             <Text style={styles.verdictText}>{verdict}</Text>
           ) : null}
 
-          <InfoCallout label="Why This Matters" body={WHY_IT_MATTERS} />
-
-          <Text style={styles.fieldLabel}>Detected Signals</Text>
-          {breakdown.detected_audience_signals.map((s, i) => (
-            <Text key={i} style={styles.bullet}>
-              · {s}
-            </Text>
-          ))}
-
           <View style={styles.compareRow}>
-            <View style={styles.compareBox}>
-              <Text style={styles.compareLabel}>WHO IT ATTRACTS</Text>
-              <Text style={styles.compareValue}>
-                {breakdown.expected_audience}
-              </Text>
-            </View>
-            <View style={[styles.compareBox, styles.compareBoxRight]}>
-              <Text style={styles.compareLabel}>YOUR TARGET</Text>
-              <Text style={[styles.compareValue, { color }]}>
-                {breakdown.target_audience}
-              </Text>
-            </View>
+            <Text style={styles.compareLabel}>Currently attracting</Text>
+            <Text style={styles.compareValue}>{breakdown.expected_audience}</Text>
+          </View>
+          <View style={[styles.compareRow, styles.compareRowBottom]}>
+            <Text style={styles.compareLabel}>Your target</Text>
+            <Text style={[styles.compareValue, { color }]}>{breakdown.target_audience}</Text>
           </View>
 
-          <Text style={styles.fieldLabel}>Gap Analysis</Text>
+          <Text style={styles.fieldLabel}>The disconnect</Text>
           <Text style={styles.gapText}>{breakdown.gap_analysis}</Text>
 
           <Text style={styles.fieldLabel}>How to Fix It</Text>
@@ -155,37 +135,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
-  bullet: {
-    fontSize: FontSize.sm,
-    fontFamily: FontFamily.sans,
-    color: Colors.textPrimary,
-    lineHeight: 20,
-    marginBottom: 2,
-  },
   compareRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
   },
-  compareBox: {
-    flex: 1,
-    backgroundColor: Colors.offWhite,
-    borderRadius: 8,
-    padding: 12,
+  compareRowBottom: {
+    marginTop: 6,
+    marginBottom: 4,
   },
-  compareBoxRight: {},
   compareLabel: {
     fontSize: FontSize.xs,
     fontFamily: FontFamily.sansSemibold,
     color: Colors.textSecondary,
     letterSpacing: 0.6,
-    marginBottom: 4,
+    flex: 1,
   },
   compareValue: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sansMedium,
     color: Colors.textPrimary,
-    lineHeight: 18,
+    flex: 2,
+    textAlign: "right",
   },
   gapText: {
     fontSize: FontSize.sm,
