@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -10,17 +10,17 @@ import {
   Platform,
   ScrollView,
   Image,
-} from 'react-native';
-import { Link } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { api } from '../../services/api';
-import { useAuthStore } from '../../store/authStore';
-import { Colors } from '../../constants/colors';
-import { FontFamily, FontSize } from '../../constants/typography';
+} from "react-native";
+import { Link } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { api } from "../../services/api";
+import { useAuthStore } from "../../store/authStore";
+import { Colors } from "../../constants/colors";
+import { FontFamily, FontSize } from "../../constants/typography";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { setSession, sessionExpired } = useAuthStore();
@@ -35,7 +35,7 @@ export default function LoginScreen() {
       await setSession(data.session, data.user);
     } catch (err) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.container}
@@ -53,14 +53,16 @@ export default function LoginScreen() {
       >
         <View style={styles.header}>
           <Image
-            source={require('../../assets/scorrd_app_badge.png')}
+            source={require("../../assets/scorrd_app_badge.png")}
             style={styles.logo}
             resizeMode="contain"
           />
           <Text style={styles.tagline}>Know your score. Own your market.</Text>
           {sessionExpired && (
             <View style={styles.expiredBanner}>
-              <Text style={styles.expiredText}>Your session expired — sign in to continue where you left off.</Text>
+              <Text style={styles.expiredText}>
+                Your session expired — sign in to continue where you left off.
+              </Text>
             </View>
           )}
         </View>
@@ -110,7 +112,8 @@ export default function LoginScreen() {
           <Link href="/(auth)/register" asChild>
             <TouchableOpacity style={styles.link}>
               <Text style={styles.linkText}>
-                Don't have an account? <Text style={styles.linkBold}>Create one</Text>
+                Don't have an account?{" "}
+                <Text style={styles.linkBold}>Create one</Text>
               </Text>
             </TouchableOpacity>
           </Link>
@@ -122,13 +125,13 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: Colors.offWhite },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  header: { marginBottom: 48, alignItems: 'center' },
+  container: { flexGrow: 1, justifyContent: "center", padding: 24 },
+  header: { marginBottom: 48, alignItems: "center" },
   logo: {
     width: 140,
     height: 140,
     borderRadius: 28,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -163,13 +166,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sans,
     color: Colors.error,
-    textAlign: 'center',
+    textAlign: "center",
   },
   button: {
     backgroundColor: Colors.teal,
     borderRadius: 24,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: { opacity: 0.6 },
@@ -191,9 +194,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sans,
     color: Colors.textPrimary,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  link: { alignItems: 'center', paddingVertical: 8 },
+  link: { alignItems: "center", paddingVertical: 8 },
   linkText: {
     fontSize: FontSize.sm,
     fontFamily: FontFamily.sans,
