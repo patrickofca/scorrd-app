@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useMutation } from '@tanstack/react-query';
@@ -22,22 +22,49 @@ const SPECIALIZATION_OPTIONS = [
   'Distressed Sales',
 ];
 
+const YEARS_OPTIONS = ['1-3 yrs', '4-7 yrs', '8-15 yrs', '16-25 yrs', '25+ yrs'];
+const YEARS_MAP: Record<string, number> = {
+  '1-3 yrs': 2, '4-7 yrs': 5, '8-15 yrs': 11, '16-25 yrs': 20, '25+ yrs': 30,
+};
+
+const TRANSACTION_OPTIONS = ['1-50', '51-150', '151-300', '301-500', '500+'];
+const TRANSACTION_MAP: Record<string, number> = {
+  '1-50': 25, '51-150': 100, '151-300': 225, '301-500': 400, '500+': 600,
+};
+
+function yearsToOption(n?: number): string {
+  if (!n) return '';
+  if (n <= 3) return '1-3 yrs';
+  if (n <= 7) return '4-7 yrs';
+  if (n <= 15) return '8-15 yrs';
+  if (n <= 25) return '16-25 yrs';
+  return '25+ yrs';
+}
+
+function transactionToOption(n?: number): string {
+  if (!n) return '';
+  if (n <= 50) return '1-50';
+  if (n <= 150) return '51-150';
+  if (n <= 300) return '151-300';
+  if (n <= 500) return '301-500';
+  return '500+';
+}
+
 interface Props {
   user: User;
 }
 
 export default function ProfileSection({ user }: Props) {
   const [name, setName] = useState(user.name ?? '');
+  const [nameInput, setNameInput] = useState('');
   const [market, setMarket] = useState(user.marketLocation ?? '');
+  const [marketInput, setMarketInput] = useState('');
   const [brokerage, setBrokerage] = useState(user.brokerageName ?? '');
+  const [brokerageInput, setBrokerageInput] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(user.avatarUrl ?? null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
-  const [yearsInBusiness, setYearsInBusiness] = useState(
-    user.yearsInBusiness != null ? String(user.yearsInBusiness) : ''
-  );
-  const [transactionCount, setTransactionCount] = useState(
-    user.transactionCount != null ? String(user.transactionCount) : ''
-  );
+  const [selectedYears, setSelectedYears] = useState(yearsToOption(user.yearsInBusiness));
+  const [selectedTransactions, setSelectedTransactions] = useState(transactionToOption(user.transactionCount));
   const [focusNeighborhoods, setFocusNeighborhoods] = useState<string[]>(
     user.focusNeighborhoods ?? []
   );
@@ -46,21 +73,46 @@ export default function ProfileSection({ user }: Props) {
     user.specializations ?? []
   );
 
+  useEffect(() => {
+    setName(user.name ?? '');
+    setMarket(user.marketLocation ?? '');
+    setBrokerage(user.brokerageName ?? '');
+    setAvatarUri(user.avatarUrl ?? null);
+    setSelectedYears(yearsToOption(user.yearsInBusiness));
+    setSelectedTransactions(transactionToOption(user.transactionCount));
+    setFocusNeighborhoods(user.focusNeighborhoods ?? []);
+    setSpecializations(user.specializations ?? []);
+  }, [user]);
+
   const { mutate, isPending } = useMutation({
-    mutationFn: () =>
-      api.me.update({
-        name: name.trim() || null,
-        market_location: market.trim() || null,
-        brokerage_name: brokerage.trim() || null,
+    mutationFn: () => {
+      const effectiveName = name.trim() || nameInput.trim();
+      const effectiveMarket = market.trim() || marketInput.trim();
+      const effectiveBrokerage = brokerage.trim() || brokerageInput.trim();
+      return api.me.update({
+        name: effectiveName || null,
+        market_location: effectiveMarket || null,
+        brokerage_name: effectiveBrokerage || null,
         ...(avatarBase64 ? { avatar_url: avatarBase64 } : {}),
-        years_in_business: yearsInBusiness ? parseInt(yearsInBusiness, 10) : null,
-        transaction_count: transactionCount ? parseInt(transactionCount, 10) : null,
-        specializations,
-        focus_neighborhoods: focusNeighborhoods,
-      }),
-    onSuccess: (updated) => {
+        ...(selectedYears ? { years_in_business: YEARS_MAP[selectedYears] } : {}),
+        ...(selectedTransactions ? { transaction_count: TRANSACTION_MAP[selectedTransactions] } : {}),
+        ...(specializations.length > 0 ? { specializations } : {}),
+        ...(focusNeighborhoods.length > 0 ? { focus_neighborhoods: focusNeighborhoods } : {}),
+      });
+    },
+    onSuccess: async (updated) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      useAuthStore.setState({ user: updated });
+      const current = useAuthStore.getState().user;
+      await useAuthStore.getState().setUser({
+        ...current!,
+        ...updated,
+        marketLocation: updated.marketLocation ?? (market.trim() || marketInput.trim() || null),
+        brokerageName: updated.brokerageName ?? (brokerage.trim() || brokerageInput.trim() || null),
+        yearsInBusiness: updated.yearsInBusiness || (selectedYears ? YEARS_MAP[selectedYears] : undefined),
+        transactionCount: updated.transactionCount || (selectedTransactions ? TRANSACTION_MAP[selectedTransactions] : undefined),
+        specializations: updated.specializations ?? specializations,
+        focusNeighborhoods: updated.focusNeighborhoods ?? focusNeighborhoods,
+      });
       setAvatarBase64(null);
     },
     onError: (err) => {
@@ -91,6 +143,16 @@ export default function ProfileSection({ user }: Props) {
     );
   }
 
+  function toggleYears(option: string) {
+    Haptics.selectionAsync();
+    setSelectedYears((prev) => (prev === option ? '' : option));
+  }
+
+  function toggleTransactions(option: string) {
+    Haptics.selectionAsync();
+    setSelectedTransactions((prev) => (prev === option ? '' : option));
+  }
+
   const initials = (user.name ?? user.email ?? 'A').charAt(0).toUpperCase();
 
   return (
@@ -114,52 +176,103 @@ export default function ProfileSection({ user }: Props) {
       <Text style={styles.label}>Agent Name</Text>
       <TextInput
         style={styles.input}
-        value={name}
-        onChangeText={setName}
+        value={nameInput}
+        onChangeText={setNameInput}
+        onSubmitEditing={() => { if (nameInput.trim()) { setName(nameInput.trim()); setNameInput(''); } }}
         placeholder="Your full name"
         placeholderTextColor="#94A3B8"
         autoCapitalize="words"
+        returnKeyType="done"
+        blurOnSubmit={false}
       />
+      {name.trim() ? (
+        <View style={styles.tagRow}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{name}</Text>
+            <TouchableOpacity onPress={() => setName('')} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <Ionicons name="close" size={13} color={Colors.teal} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
 
       <Text style={styles.label}>Market</Text>
       <TextInput
         style={styles.input}
-        value={market}
-        onChangeText={setMarket}
+        value={marketInput}
+        onChangeText={setMarketInput}
+        onSubmitEditing={() => { if (marketInput.trim()) { setMarket(marketInput.trim()); setMarketInput(''); } }}
         placeholder="e.g. Miami, FL"
         placeholderTextColor="#94A3B8"
+        returnKeyType="done"
+        blurOnSubmit={false}
       />
+      {market.trim() ? (
+        <View style={styles.tagRow}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{market}</Text>
+            <TouchableOpacity onPress={() => setMarket('')} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <Ionicons name="close" size={13} color={Colors.teal} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
 
       <Text style={styles.label}>Brokerage</Text>
       <TextInput
         style={styles.input}
-        value={brokerage}
-        onChangeText={setBrokerage}
+        value={brokerageInput}
+        onChangeText={setBrokerageInput}
+        onSubmitEditing={() => { if (brokerageInput.trim()) { setBrokerage(brokerageInput.trim()); setBrokerageInput(''); } }}
         placeholder="Your brokerage name"
         placeholderTextColor="#94A3B8"
+        returnKeyType="done"
+        blurOnSubmit={false}
       />
+      {brokerage.trim() ? (
+        <View style={styles.tagRow}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>{brokerage}</Text>
+            <TouchableOpacity onPress={() => setBrokerage('')} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <Ionicons name="close" size={13} color={Colors.teal} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
 
       <Text style={styles.label}>Years in real estate</Text>
-      <TextInput
-        style={styles.input}
-        value={yearsInBusiness}
-        onChangeText={setYearsInBusiness}
-        placeholder="e.g. 7"
-        placeholderTextColor="#94A3B8"
-        keyboardType="numeric"
-        maxLength={3}
-      />
+      <View style={styles.pillGrid}>
+        {YEARS_OPTIONS.map((option) => {
+          const selected = selectedYears === option;
+          return (
+            <TouchableOpacity
+              key={option}
+              style={[styles.pill, selected && styles.pillSelected]}
+              onPress={() => toggleYears(option)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.pillLabel, selected && styles.pillLabelSelected]}>{option}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <Text style={styles.label}>Total transactions closed (career)</Text>
-      <TextInput
-        style={styles.input}
-        value={transactionCount}
-        onChangeText={setTransactionCount}
-        placeholder="e.g. 200"
-        placeholderTextColor="#94A3B8"
-        keyboardType="numeric"
-        maxLength={6}
-      />
+      <View style={styles.pillGrid}>
+        {TRANSACTION_OPTIONS.map((option) => {
+          const selected = selectedTransactions === option;
+          return (
+            <TouchableOpacity
+              key={option}
+              style={[styles.pill, selected && styles.pillSelected]}
+              onPress={() => toggleTransactions(option)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.pillLabel, selected && styles.pillLabelSelected]}>{option}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
       <Text style={styles.helperText}>Builds credibility in generated posts</Text>
 
       <Text style={styles.label}>Neighborhoods you specialize in</Text>
